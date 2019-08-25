@@ -263,9 +263,6 @@ void osInit(int argc, char *argv[]) {
     //  Look at this carefully - this is an example of how you will start
     //     all of the other tests.
 
-    //Initialize process manager first.
-    pcbInit();
-
     if ((argc > 1) && (strcmp(argv[1], "sample") == 0)) {
         mmio.Mode = Z502InitializeContext;
         mmio.Field1 = 0;
@@ -280,10 +277,18 @@ void osInit(int argc, char *argv[]) {
 
     }
 
-    int testDetected = 0;
+    //int testDetected = 0;
     //boolean of whether the command line input says to do a test
 
     if((argc > 1) && (strcmp(argv[1], "test1") == 0)) {
+
+    	long address = (long)test1;
+    	pcbInit(address, (long)PageTable);
+
+    }
+
+
+    /*if((argc > 1) && (strcmp(argv[1], "test1") == 0)) {
 
     	testDetected = 1;
 
@@ -303,7 +308,7 @@ void osInit(int argc, char *argv[]) {
 		mmio.Field2 = START_NEW_CONTEXT_AND_SUSPEND;
 		MEM_WRITE(Z502Context, &mmio);     // Start up the context
 
-    }
+    }*/
 
     //otherwise, we do the default: running test0.
 

@@ -8,7 +8,7 @@
 #ifndef PROCESSMANAGER_H_
 #define PROCESSMANAGER_H_
 
-void pcbInit(void);
+void pcbInit(long address, long pageTable);
 long getPid(char* name);
 
 #endif /* PROCESSMANAGER_H_ */

@@ -7,11 +7,14 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include "global.h"
+#include "syscalls.h"
+#include "protos.h"
 
 #define MAX_PROCESSES 15
 
 //function prototypes
-void createInitialProcess(void);
+void createInitialProcess(long address, long pageTable);
 
 //Struct for a process.
 //pid: the process ID.
@@ -22,7 +25,8 @@ struct Process {
 	long pid;
 	long priority;
 	char* name;
-	void* startingAddress;
+	long startingAddress;
+	long pageTable;
 };
 
 typedef struct Process Process;
@@ -35,14 +39,14 @@ long currPidNumber = 1;
 //we get the next number in the sequence by incrementing currPidNumber.
 
 /**
- * This does all initial work needed at the start of running
+ * This does all initial work needed for starting
  * the first process. This includes creating the first process
  * and allocating data for possible other processes.
  */
-void pcbInit(void) {
+void pcbInit(long address, long pageTable) {
 
 	processes = (Process *)calloc(MAX_PROCESSES, sizeof(Process));
-	createInitialProcess();
+	createInitialProcess(address, pageTable);
 
 }
 
@@ -50,7 +54,7 @@ void pcbInit(void) {
  * This method facilitates the creation of the currently
  * running process. It stores the process in memory.
  */
-void createInitialProcess(void) {
+void createInitialProcess(long address, long pageTable) {
 
 	if(numProcesses == MAX_PROCESSES) {
 		//return error value here
@@ -61,12 +65,27 @@ void createInitialProcess(void) {
 	process.name = ""; //current process's name is ""
 	process.priority = 0;
 	process.pid =  currPidNumber;
+	process.startingAddress = address;
+	process.pageTable = pageTable;
 
 	processes[numProcesses] = process;
 
 	//update number of processes and the next pid in the sequence.
 	++currPidNumber;
 	++numProcesses;
+
+	//start the process.
+	MEMORY_MAPPED_IO mmio;
+	mmio.Mode = Z502InitializeContext;
+	mmio.Field1 = 0;
+	mmio.Field2 = (long) process.startingAddress;
+	mmio.Field3 = (long) process.pageTable;
+
+	MEM_WRITE(Z502Context, &mmio);   // Start of Make Context Sequence
+	mmio.Mode = Z502StartContext;
+	// Field1 contains the value of the context returned in the last call
+	mmio.Field2 = START_NEW_CONTEXT_AND_SUSPEND;
+	MEM_WRITE(Z502Context, &mmio);     // Start up the context
 
 }
 
