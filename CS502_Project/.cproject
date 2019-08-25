@@ -37,7 +37,7 @@
                             							
                             <targetPlatform id="cdt.managedbuild.target.gnu.platform.macosx.exe.debug.625414219" name="Debug Platform" superClass="cdt.managedbuild.target.gnu.platform.macosx.exe.debug"/>
                             							
-                            <builder buildPath="${workspace_loc:/CS502 Project}/Debug" id="cdt.managedbuild.target.gnu.builder.macosx.exe.debug.764513703" keepEnvironmentInBuildfile="false" managedBuildOn="true" name="Gnu Make Builder" superClass="cdt.managedbuild.target.gnu.builder.macosx.exe.debug"/>
+                            <builder buildPath="${workspace_loc:/CS502_Project}" id="cdt.managedbuild.target.gnu.builder.macosx.exe.debug.764513703" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" superClass="cdt.managedbuild.target.gnu.builder.macosx.exe.debug"/>
                             							
                             <tool id="cdt.managedbuild.tool.macosx.c.linker.macosx.exe.debug.150352380" name="MacOS X C Linker" superClass="cdt.managedbuild.tool.macosx.c.linker.macosx.exe.debug">
                                 								
@@ -208,5 +208,21 @@
     <storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
     	
     <storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
+    	
+    <storageModule moduleId="refreshScope" versionNumber="2">
+        		
+        <configuration configurationName="Debug">
+            			
+            <resource resourceType="PROJECT" workspacePath="/CS502_Project"/>
+            		
+        </configuration>
+        		
+        <configuration configurationName="Release">
+            			
+            <resource resourceType="PROJECT" workspacePath="/CS502_Project"/>
+            		
+        </configuration>
+        	
+    </storageModule>
     
 </cproject>
