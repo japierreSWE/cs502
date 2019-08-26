@@ -195,6 +195,7 @@ void svc(SYSTEM_CALL_DATA *SystemCallData) {
     		*SystemCallData->Argument[1] = pid;
     		*SystemCallData->Argument[2] = ERR_SUCCESS;
 
+    		break;
     	}
 
     }
@@ -277,38 +278,19 @@ void osInit(int argc, char *argv[]) {
 
     }
 
-    //int testDetected = 0;
-    //boolean of whether the command line input says to do a test
-
+    //control blocks for each test.
+    //if we find a test, make the PCB for that test.
     if((argc > 1) && (strcmp(argv[1], "test1") == 0)) {
 
     	long address = (long)test1;
     	pcbInit(address, (long)PageTable);
 
-    }
+    } else if((argc > 1) && (strcmp(argv[1], "test2") == 0)) {
 
-
-    /*if((argc > 1) && (strcmp(argv[1], "test1") == 0)) {
-
-    	testDetected = 1;
-
-    	mmio.Mode = Z502InitializeContext;
-		mmio.Field1 = 0;
-		mmio.Field2 = (long) test1;
-		mmio.Field3 = (long) PageTable;
+    	long address = (long)test2;
+		pcbInit(address, (long)PageTable);
 
     }
-
-    //we start the context if we detected a test.
-    if(testDetected) {
-
-    	MEM_WRITE(Z502Context, &mmio);   // Start of Make Context Sequence
-		mmio.Mode = Z502StartContext;
-		// Field1 contains the value of the context returned in the last call
-		mmio.Field2 = START_NEW_CONTEXT_AND_SUSPEND;
-		MEM_WRITE(Z502Context, &mmio);     // Start up the context
-
-    }*/
 
     //otherwise, we do the default: running test0.
 

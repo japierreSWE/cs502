@@ -27,6 +27,7 @@ struct Process {
 	char* name;
 	long startingAddress;
 	long pageTable;
+	long contextId;
 };
 
 typedef struct Process Process;
@@ -68,13 +69,7 @@ void createInitialProcess(long address, long pageTable) {
 	process.startingAddress = address;
 	process.pageTable = pageTable;
 
-	processes[numProcesses] = process;
-
-	//update number of processes and the next pid in the sequence.
-	++currPidNumber;
-	++numProcesses;
-
-	//start the process.
+	//start the process by initializing then starting context.
 	MEMORY_MAPPED_IO mmio;
 	mmio.Mode = Z502InitializeContext;
 	mmio.Field1 = 0;
@@ -82,10 +77,31 @@ void createInitialProcess(long address, long pageTable) {
 	mmio.Field3 = (long) process.pageTable;
 
 	MEM_WRITE(Z502Context, &mmio);   // Start of Make Context Sequence
+
+	//check that this call was successful
+	if(mmio.Field4 != ERR_SUCCESS) {
+		printf("Could not initialize context.\n");
+		exit(0);
+	}
+
+	process.contextId = mmio.Field1;
+
+	processes[numProcesses] = process;
+
+	//update number of processes and the next pid in the sequence.
+	++currPidNumber;
+	++numProcesses;
+
 	mmio.Mode = Z502StartContext;
 	// Field1 contains the value of the context returned in the last call
 	mmio.Field2 = START_NEW_CONTEXT_AND_SUSPEND;
 	MEM_WRITE(Z502Context, &mmio);     // Start up the context
+
+	//check that this call was successful
+	if(mmio.Field4 != ERR_SUCCESS) {
+		printf("Could not start context.\n");
+		exit(0);
+	}
 
 }
 
