@@ -10,5 +10,7 @@
 
 void pcbInit(long address, long pageTable);
 long getPid(char* name);
+void startTimer(long timeAmount);
+void suspendProcess();
 
 #endif /* PROCESSMANAGER_H_ */

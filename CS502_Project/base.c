@@ -198,6 +198,14 @@ void svc(SYSTEM_CALL_DATA *SystemCallData) {
     		break;
     	}
 
+    	case SYSNUM_SLEEP: {
+
+    		long time = (long)SystemCallData->Argument[0];
+    		startTimer(time);
+    		suspendProcess();
+
+    	}
+
     }
 
 }                                               // End of svc
@@ -313,3 +321,4 @@ void osInit(int argc, char *argv[]) {
     MEM_WRITE(Z502Context, &mmio);     // Start up the context
 
 }                                               // End of osInit
+

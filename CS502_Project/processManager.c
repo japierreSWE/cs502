@@ -114,7 +114,7 @@ void createInitialProcess(long address, long pageTable) {
  */
 long getPid(char* name) {
 
-	//search for the process.
+	//search for the process, and return its pid if found.
 	for(int i = 0; i<numProcesses; i++) {
 
 		if(strcmp(name, processes[i].name) == 0) {
@@ -128,5 +128,51 @@ long getPid(char* name) {
 	//we didn't find the process. return error message.
 	return -1;
 
+}
+
+/**
+ * Starts the hardware timer for this process and
+ * adds the process to the timer queue.
+ *
+ * Parameters:
+ * timeAmount- the amount of time units until the process receives a timer interrupt.
+ */
+void startTimer(long timeAmount) {
+
+	//TODO:place on timer queue.
+
+
+
+	//TODO:wait until timer is free.
+
+	//start the hardware timer.
+	MEMORY_MAPPED_IO mmio;
+	mmio.Mode = Z502Start;
+	mmio.Field1 = timeAmount;
+	mmio.Field2 = 0;
+	mmio.Field3 = 0;
+	mmio.Field4 = 0;
+	MEM_WRITE(Z502Timer, &mmio);
+
+	//error handling for timer
+	if(mmio.Field4 != ERR_SUCCESS) {
+		printf("Error when starting timer, %ld\n", mmio.Field4);
+		exit(0);
+	}
+
+}
+
+/**
+ * Suspends the process currently running in this thread.
+ */
+void suspendProcess() {
+	//write to Z502Idle to suspend the process.
+	MEMORY_MAPPED_IO mmio;
+	mmio.Mode = Z502Action;
+	mmio.Field1 = 0;
+	mmio.Field2 = 0;
+	mmio.Field3 = 0;
+	mmio.Field4 = 0;
+	MEM_WRITE(Z502Idle, &mmio);
 }
 
