@@ -308,6 +308,11 @@ void osInit(int argc, char *argv[]) {
     	long address = (long)test2;
 		pcbInit(address, (long)PageTable);
 
+    } else if((argc > 1) && (strcmp(argv[1], "test3") == 0)) {
+
+    	long address = (long)test3;
+    	pcbInit(address, (long)PageTable);
+
     }
 
     //otherwise, we do the default: running test0.
