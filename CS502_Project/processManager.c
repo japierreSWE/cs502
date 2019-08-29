@@ -10,27 +10,9 @@
 #include "global.h"
 #include "syscalls.h"
 #include "protos.h"
+#include "processManager.h"
 
 #define MAX_PROCESSES 15
-
-//function prototypes
-void createInitialProcess(long address, long pageTable);
-
-//Struct for a process.
-//pid: the process ID.
-//priority: the process's current priority.
-//name: the name of the process.
-//startingAddress: the address the process begins execution at.
-struct Process {
-	long pid;
-	long priority;
-	char* name;
-	long startingAddress;
-	long pageTable;
-	long contextId;
-};
-
-typedef struct Process Process;
 
 Process* processes; //a dynamically allocated array that will store created processes.
 int numProcesses = 0; //the current number of processes.
@@ -39,14 +21,24 @@ long currPidNumber = 1;
 //the pid of a process is decided by a number sequence.
 //we get the next number in the sequence by incrementing currPidNumber.
 
+int timerQueueID;
+
 /**
  * This does all initial work needed for starting
- * the first process. This includes creating the first process
- * and allocating data for possible other processes.
+ * the first process. This includes creating the first process,
+ * creating the timer queue, and allocating data for
+ * possible other processes.
  */
 void pcbInit(long address, long pageTable) {
 
 	processes = (Process *)calloc(MAX_PROCESSES, sizeof(Process));
+	timerQueueID = QCreate("timerQ");
+
+	if(timerQueueID == -1) {
+		printf("Couldn't create timerQueue\n");
+		exit(0);
+	}
+
 	createInitialProcess(address, pageTable);
 
 }
@@ -139,9 +131,9 @@ long getPid(char* name) {
  */
 void startTimer(long timeAmount) {
 
-	//TODO:place on timer queue.
-
-
+	//place on timer queue.
+	Process curr = currentProcess();
+	QInsertOnTail(timerQueueID, &curr);
 
 	//TODO:wait until timer is free.
 
@@ -159,6 +151,39 @@ void startTimer(long timeAmount) {
 		printf("Error when starting timer, %ld\n", mmio.Field4);
 		exit(0);
 	}
+
+}
+
+/**
+ * Returns the process struct of the currently
+ * running process. Returns a process
+ * with a contextId of -1 if none is found.
+ */
+Process currentProcess() {
+
+	//first, we get
+	MEMORY_MAPPED_IO mmio;
+	mmio.Mode = Z502GetCurrentContext;
+	mmio.Field1 = 0;
+	mmio.Field2 = 0;
+	mmio.Field3 = 0;
+	mmio.Field4 = 0;
+
+	MEM_WRITE(Z502Context, &mmio);
+	long contextId = mmio.Field1;
+
+	//find the process with this context.
+	for(int i = 0; i<numProcesses; i++) {
+
+		if(processes[i].contextId == contextId) {
+			return processes[i];
+		}
+
+	}
+
+	Process errProc;
+	errProc.contextId = -1;
+	return errProc;
 
 }
 

@@ -71,19 +71,29 @@ void InterruptHandler(void) {
     mmio.Mode = Z502GetInterruptInfo;
     mmio.Field1 = mmio.Field2 = mmio.Field3 = mmio.Field4 = 0;
     MEM_READ(Z502InterruptDevice, &mmio);
-    DeviceID = mmio.Field1;
-    Status = mmio.Field2;
+
+    while(mmio.Field4 == ERR_SUCCESS) {
+
+    	Process* interruptedProcess = (Process*)QRemoveHead(timerQueueID);
+
+    	DeviceID = mmio.Field1;
+    	Status = mmio.Field2;
+
+    	/** REMOVE THESE SIX LINES **/
+		how_many_interrupt_entries++; /** TEMP **/
+		if (remove_this_from_your_interrupt_code && (how_many_interrupt_entries < 10)) {
+			aprintf("InterruptHandler: Found device ID %d with status %d\n",
+					DeviceID, Status);
+		}
+
+    	mmio.Field1 = mmio.Field2 = mmio.Field3 = mmio.Field4 = 0;
+    	MEM_READ(Z502InterruptDevice, &mmio);
+
+    }
+
     if (mmio.Field4 != ERR_SUCCESS) {
         aprintf( "The InterruptDevice call in the InterruptHandler has failed.\n");
         aprintf("The DeviceId and Status that were returned are not valid.\n");
-    }
-    // HAVE YOU CHECKED THAT THE INTERRUPTING DEVICE FINISHED WITHOUT ERROR?
-
-    /** REMOVE THESE SIX LINES **/
-    how_many_interrupt_entries++; /** TEMP **/
-    if (remove_this_from_your_interrupt_code && (how_many_interrupt_entries < 10)) {
-        aprintf("InterruptHandler: Found device ID %d with status %d\n",
-                DeviceID, Status);
     }
 
 }           // End of InterruptHandler
