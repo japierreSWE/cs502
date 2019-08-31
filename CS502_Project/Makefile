@@ -6,3 +6,4 @@ z502: *.c *.h
 clean:
 	rm z502
 	rm -rf z502.dSYM
+	rm CheckDiskData

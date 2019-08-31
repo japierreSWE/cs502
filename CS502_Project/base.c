@@ -32,6 +32,7 @@
 #include             <stdlib.h>
 #include             <ctype.h>
 #include			 "processManager.h"
+#include			 "diskManager.h"
 
 
 //  This is a mapping of system call nmemonics with definitions
@@ -42,6 +43,7 @@ char *call_names[] = {"MemRead  ", "MemWrite ", "ReadMod  ", "GetTime  ",
         "PhyDskWrt", "DefShArea", "Format   ", "CheckDisk", "OpenDir  ",
         "OpenFile ", "CreaDir  ", "CreaFile ", "ReadFile ", "WriteFile",
         "CloseFile", "DirContnt", "DelDirect", "DelFile  " };
+
 
 /************************************************************************
  INTERRUPT_HANDLER
@@ -72,12 +74,16 @@ void InterruptHandler(void) {
     mmio.Field1 = mmio.Field2 = mmio.Field3 = mmio.Field4 = 0;
     MEM_READ(Z502InterruptDevice, &mmio);
 
+    //this loop keeps obtaining interrupts until there
+    //aren't any more.
     while(mmio.Field4 == ERR_SUCCESS) {
-
-    	Process* interruptedProcess = (Process*)QRemoveHead(timerQueueID);
 
     	DeviceID = mmio.Field1;
     	Status = mmio.Field2;
+
+    	if(DeviceID == TIMER_INTERRUPT) {
+    		Process* interruptedProcess = (Process*)QRemoveHead(timerQueueID);
+    	}
 
     	/** REMOVE THESE SIX LINES **/
 		how_many_interrupt_entries++; /** TEMP **/
@@ -92,8 +98,8 @@ void InterruptHandler(void) {
     }
 
     if (mmio.Field4 != ERR_SUCCESS) {
-        aprintf( "The InterruptDevice call in the InterruptHandler has failed.\n");
-        aprintf("The DeviceId and Status that were returned are not valid.\n");
+        //aprintf( "The InterruptDevice call in the InterruptHandler has failed.\n");
+        //aprintf("The DeviceId and Status that were returned are not valid.\n");
     }
 
 }           // End of InterruptHandler
@@ -212,8 +218,32 @@ void svc(SYSTEM_CALL_DATA *SystemCallData) {
 
     		long time = (long)SystemCallData->Argument[0];
     		startTimer(time);
-    		suspendProcess();
+    		idle();
+    		break;
+    	}
 
+    	case SYSNUM_PHYSICAL_DISK_WRITE: {
+
+    		long diskID = (long)SystemCallData->Argument[0];
+    		long sector = (long)SystemCallData->Argument[1];
+    		char* writeBuffer = (char*)SystemCallData->Argument[2];
+    		writeToDisk(diskID, sector, writeBuffer);
+    		break;
+    	}
+
+    	case SYSNUM_PHYSICAL_DISK_READ: {
+
+    		long diskID = (long)SystemCallData->Argument[0];
+    		long sector = (long)SystemCallData->Argument[1];
+    		char* readBuffer = (char*)SystemCallData->Argument[2];
+    		readFromDisk(diskID, sector, readBuffer);
+    		break;
+    	}
+
+    	case SYSNUM_CHECK_DISK: {
+    		long diskID = (long)SystemCallData->Argument[0];
+    		checkDisk(diskID);
+    		break;
     	}
 
     }

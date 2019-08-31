@@ -29,9 +29,9 @@ typedef struct Process Process;
 void pcbInit(long address, long pageTable);
 long getPid(char* name);
 void startTimer(long timeAmount);
-void suspendProcess();
 Process currentProcess();
 void createInitialProcess(long address, long pageTable);
+void idle();
 
 int timerQueueID;
 

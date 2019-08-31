@@ -188,9 +188,9 @@ Process currentProcess() {
 }
 
 /**
- * Suspends the process currently running in this thread.
+ * Suspends the process currently running.
  */
-void suspendProcess() {
+void idle() {
 	//write to Z502Idle to suspend the process.
 	MEMORY_MAPPED_IO mmio;
 	mmio.Mode = Z502Action;
