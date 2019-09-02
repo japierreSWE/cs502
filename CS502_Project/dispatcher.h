@@ -8,6 +8,10 @@
 #ifndef DISPATCHER_H_
 #define DISPATCHER_H_
 
+int readyQueueId;
 
+void initReadyQueue();
+void dispatch();
+int readyQueueIsEmpty();
 
 #endif /* DISPATCHER_H_ */

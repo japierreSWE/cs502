@@ -25,6 +25,8 @@ void initDiskManager() {
 	//get the queue id's for each disk
 	for(int i = 0; i<MAX_NUMBER_OF_DISKS; i++) {
 
+		//give each disk queue a name of
+		//disk0, disk1, disk2, and so on
 		char* name = (char *)calloc(6, sizeof(char));
 		strcpy(name, "disk");
 		char number[2];
@@ -118,5 +120,24 @@ void checkDisk(long diskID) {
 	mmio.Field4 = 0;
 
 	MEM_WRITE(Z502Disk, &mmio);
+
+}
+
+/*
+ * Checks the status of a given disk.
+ * Parameters:
+ * diskID: the ID of the disk to check.
+ * Returns the status of the disk.
+ */
+long getDiskStatus(long diskID) {
+	MEMORY_MAPPED_IO mmio;
+	mmio.Mode = Z502Status;
+	mmio.Field1 = diskID;
+	mmio.Field2 = 0;
+	mmio.Field3 = 0;
+	mmio.Field4 = 0;
+
+	MEM_READ(Z502Disk, &mmio);
+	return mmio.Field2;
 
 }
