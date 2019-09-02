@@ -11,6 +11,7 @@
 #include "syscalls.h"
 #include "protos.h"
 #include "processManager.h"
+#include "diskManager.h"
 
 #define MAX_PROCESSES 15
 
@@ -39,6 +40,7 @@ void pcbInit(long address, long pageTable) {
 		exit(0);
 	}
 
+	initDiskManager();
 	createInitialProcess(address, pageTable);
 
 }

@@ -26,8 +26,8 @@ void initDiskManager() {
 	for(int i = 0; i<MAX_NUMBER_OF_DISKS; i++) {
 
 		char* name = (char *)calloc(6, sizeof(char));
-		name = "disk";
-		char number[1];
+		strcpy(name, "disk");
+		char number[2];
 		sprintf(number, "%d", i);
 		strcat(name, number);
 		diskQueueIds[i] = QCreate(name);
@@ -90,9 +90,9 @@ void readFromDisk(long diskID, long sector, char* readBuffer) {
 	MEM_WRITE(Z502Disk, &mmio);
 
 	if(mmio.Field4 == ERR_BAD_PARAM) {
-		printf("ERROR: Invalid parameter for disk write.\n");
+		printf("ERROR: Invalid parameter for disk read.\n");
 	} else if(mmio.Field4 == ERR_DISK_IN_USE) {
-		printf("ERROR: Disk write attempted when disk is already in use.\n");
+		printf("ERROR: Disk read attempted when disk is already in use.\n");
 	} else if(mmio.Field4 == ERR_NO_PREVIOUS_WRITE) {
 		printf("ERROR: Read from a sector that hasn't been written to.\n");
 	}
