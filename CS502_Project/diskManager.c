@@ -47,8 +47,6 @@ void initDiskManager() {
  */
 void writeToDisk(long diskID, long sector, char* writeBuffer) {
 
-	//TODO: check that disk is free and wait if in use.
-
 	//ask disk to write.
 	MEMORY_MAPPED_IO mmio;
 	mmio.Mode = Z502DiskWrite;
@@ -67,8 +65,9 @@ void writeToDisk(long diskID, long sector, char* writeBuffer) {
 	//TODO: add to disk queue.
 
 	//wait for disk to write.
-	idle();
-
+	while(getDiskStatus(diskID) == DEVICE_IN_USE) {
+		idle();
+	}
 }
 
 /**
@@ -79,8 +78,6 @@ void writeToDisk(long diskID, long sector, char* writeBuffer) {
  * readBuffer: the address to send the data to.
  */
 void readFromDisk(long diskID, long sector, char* readBuffer) {
-
-	//TODO: check that disk is free and wait if in use.
 
 	//ask for disk read.
 	MEMORY_MAPPED_IO mmio;
@@ -100,7 +97,9 @@ void readFromDisk(long diskID, long sector, char* readBuffer) {
 	}
 
 	//wait to read from disk.
-	idle();
+	while(getDiskStatus(diskID) == DEVICE_IN_USE) {
+		idle();
+	}
 
 }
 

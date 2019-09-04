@@ -12,6 +12,7 @@
 #include "syscalls.h"
 #include "protos.h"
 #include "dispatcher.h"
+#include "processManager.h"
 
 /**
  * Sets up the ready queue for use.
@@ -44,4 +45,13 @@ void dispatch() {
  */
 int readyQueueIsEmpty() {
 	return (int)QNextItemInfo(readyQueueId) == -1;
+}
+
+/**
+ * Adds a process to the ready queue.
+ * Parameters: process: the process to be added.
+ */
+void addToReadyQueue(Process process) {
+	//TODO: add process based on priority.
+	QInsertOnTail(readyQueueId, &process);
 }
