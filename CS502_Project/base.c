@@ -82,6 +82,7 @@ void InterruptHandler(void) {
     	Status = mmio.Field2;
 
     	if(DeviceID == TIMER_INTERRUPT) {
+    		aprintf("InterruptHandler: Timer interrupt found.\n");
     		Process* interruptedProcess = (Process*)QRemoveHead(timerQueueID);
     	}
 
@@ -98,6 +99,7 @@ void InterruptHandler(void) {
     }
 
     if (mmio.Field4 != ERR_SUCCESS) {
+    	aprintf("InterruptHandler: Could not receive interrupt info. InterruptHandler has either finished receiving interrupts or has failed to receive the interrupt.\n");
         //aprintf( "The InterruptDevice call in the InterruptHandler has failed.\n");
         //aprintf("The DeviceId and Status that were returned are not valid.\n");
     }

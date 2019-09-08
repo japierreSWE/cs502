@@ -67,6 +67,7 @@ void writeToDisk(long diskID, long sector, char* writeBuffer) {
 	//TODO: add to disk queue.
 
 	//wait for disk to write.
+	//TODO: interact w/ a dispatcher while doing this.
 	while(getDiskStatus(diskID) == DEVICE_IN_USE) {
 		idle();
 	}
@@ -99,6 +100,7 @@ void readFromDisk(long diskID, long sector, char* readBuffer) {
 	}
 
 	//wait to read from disk.
+	//TODO: interact w/ a dispatcher while doing this.
 	while(getDiskStatus(diskID) == DEVICE_IN_USE) {
 		idle();
 	}
