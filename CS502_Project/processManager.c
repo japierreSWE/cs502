@@ -14,6 +14,8 @@
 #include "diskManager.h"
 #include "dispatcher.h"
 
+void storeProcess(Process process);
+
 #define MAX_PROCESSES 15
 
 Process* processes; //a dynamically allocated array that will store created processes.
@@ -82,11 +84,7 @@ void createInitialProcess(long address, long pageTable) {
 
 	process.contextId = mmio.Field1;
 
-	processes[numProcesses] = process;
-
-	//update number of processes and the next pid in the sequence.
-	++currPidNumber;
-	++numProcesses;
+	storeProcess(process);
 
 	mmio.Mode = Z502StartContext;
 	// Field1 contains the value of the context returned in the last call
@@ -188,6 +186,73 @@ Process currentProcess() {
 	Process errProc;
 	errProc.contextId = -1;
 	return errProc;
+
+}
+
+/**
+ * Stores a process in the processes array and
+ * updates the pid sequence and current
+ * number of processes.
+ */
+void storeProcess(Process process) {
+	processes[numProcesses] = process;
+
+	//update number of processes and the next pid in the sequence.
+	++currPidNumber;
+	++numProcesses;
+}
+
+/**
+ * Creates a process and places it on the ready queue.
+ * Parameters:
+ * processName: the name of the process to be created.
+ * startingAddress: the address that this process should start at.
+ * initialPriority: the priority that this process starts with.
+ * pid: the address pointing to this process's pid.
+ */
+long createProcess(char* processName, void* startingAddress, long initialPriority, long* pid) {
+
+	//process can't have an illegal priority
+	if(initialPriority < 0) {
+		return;
+	}
+
+	//process can't have the same name as another process.
+	if(getPid(processName) != -1) {
+		return;
+	}
+
+	//we can't have more than the maximum amount of processes.
+	if(numProcesses == MAX_PROCESSES) {
+		return;
+	}
+
+	Process process;
+	process.name = processName;
+	process.startingAddress = startingAddress;
+	process.priority = initialPriority;
+	process.pid = currPidNumber;
+
+	//start the process by initializing then starting context.
+	MEMORY_MAPPED_IO mmio;
+	mmio.Mode = Z502InitializeContext;
+	mmio.Field1 = 0;
+	mmio.Field2 = (long) process.startingAddress;
+	mmio.Field3 = (long) process.pageTable;
+
+	MEM_WRITE(Z502Context, &mmio);   // Start of Make Context Sequence
+
+	//check that this call was successful
+	if(mmio.Field4 != ERR_SUCCESS) {
+		aprintf("Could not initialize context.\n");
+		exit(0);
+	}
+
+	process.contextId = mmio.Field1;
+
+	storeProcess(process);
+
+	addToReadyQueue(process);
 
 }
 

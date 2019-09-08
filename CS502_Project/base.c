@@ -248,6 +248,16 @@ void svc(SYSTEM_CALL_DATA *SystemCallData) {
     		break;
     	}
 
+    	case SYSNUM_CREATE_PROCESS: {
+    		char* processName = (char*)SystemCallData->Argument[0];
+    		void* startingAddress = (void*)SystemCallData->Argument[1];
+    		long initialPriority = (long)SystemCallData->Argument[2];
+    		long* pid = (long*)SystemCallData->Argument[3];
+    		long* errorReturned = (long*)SystemCallData->Argument[4];
+    		createProcess(processName,startingAddress,initialPriority,pid);
+    		break;
+    	}
+
     }
 
 }                                               // End of svc
