@@ -37,7 +37,7 @@ void pcbInit(long address, long pageTable) {
 	timerQueueID = QCreate("timerQ");
 
 	if(timerQueueID == -1) {
-		printf("Couldn't create timerQueue\n");
+		aprintf("Couldn't create timerQueue\n");
 		exit(0);
 	}
 
@@ -76,7 +76,7 @@ void createInitialProcess(long address, long pageTable) {
 
 	//check that this call was successful
 	if(mmio.Field4 != ERR_SUCCESS) {
-		printf("Could not initialize context.\n");
+		aprintf("Could not initialize context.\n");
 		exit(0);
 	}
 
@@ -95,7 +95,7 @@ void createInitialProcess(long address, long pageTable) {
 
 	//check that this call was successful
 	if(mmio.Field4 != ERR_SUCCESS) {
-		printf("Could not start context.\n");
+		aprintf("Could not start context.\n");
 		exit(0);
 	}
 
@@ -152,7 +152,7 @@ void startTimer(long timeAmount) {
 
 	//error handling for timer
 	if(mmio.Field4 != ERR_SUCCESS) {
-		printf("Error when starting timer, %ld\n", mmio.Field4);
+		aprintf("Error when starting timer, %ld\n", mmio.Field4);
 		exit(0);
 	}
 

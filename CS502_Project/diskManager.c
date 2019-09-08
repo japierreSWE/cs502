@@ -57,9 +57,11 @@ void writeToDisk(long diskID, long sector, char* writeBuffer) {
 	MEM_WRITE(Z502Disk, &mmio);
 
 	if(mmio.Field4 == ERR_BAD_PARAM) {
-		printf("Invalid parameter for disk write.\n");
+		aprintf("ERROR: Invalid parameter for disk write.\n");
+		exit(0);
 	} else if(mmio.Field4 == ERR_DISK_IN_USE) {
-		printf("Disk write attempted when disk is already in use.\n");
+		aprintf("ERROR: Disk write attempted when disk is already in use.\n");
+		exit(0);
 	}
 
 	//TODO: add to disk queue.
@@ -89,11 +91,11 @@ void readFromDisk(long diskID, long sector, char* readBuffer) {
 	MEM_WRITE(Z502Disk, &mmio);
 
 	if(mmio.Field4 == ERR_BAD_PARAM) {
-		printf("ERROR: Invalid parameter for disk read.\n");
+		aprintf("ERROR: Invalid parameter for disk read.\n");
 	} else if(mmio.Field4 == ERR_DISK_IN_USE) {
-		printf("ERROR: Disk read attempted when disk is already in use.\n");
+		aprintf("ERROR: Disk read attempted when disk is already in use.\n");
 	} else if(mmio.Field4 == ERR_NO_PREVIOUS_WRITE) {
-		printf("ERROR: Read from a sector that hasn't been written to.\n");
+		aprintf("ERROR: Read from a sector that hasn't been written to.\n");
 	}
 
 	//wait to read from disk.
