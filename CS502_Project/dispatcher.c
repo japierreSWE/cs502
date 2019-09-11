@@ -53,5 +53,32 @@ int readyQueueIsEmpty() {
  */
 void addToReadyQueue(Process process) {
 	//TODO: add process based on priority.
-	QInsertOnTail(readyQueueId, &process);
+	//QInsertOnTail(readyQueueId, &process);
+
+	int i = 0;
+	Process* current;
+
+	do {
+
+		current = QWalk(readyQueueId, 0);
+
+		//if we haven't reached the end of the queue,
+		//keep going until we find a process with a lower or equal priority.
+		if((int)current != -1) {
+
+			if(current->priority <= process.priority) {
+
+				QInsert(readyQueueId,i,&process);
+				break;
+
+			} else {
+				++i;
+			}
+		//if we reached the end, add this process to the tail.
+		} else {
+			QInsertOnTail(readyQueueId,&process);
+		}
+
+	} while((int)current != -1);
+
 }

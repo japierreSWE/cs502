@@ -26,6 +26,7 @@ long currPidNumber = 1;
 //we get the next number in the sequence by incrementing currPidNumber.
 
 int timerQueueID;
+int processQueueID;
 
 /**
  * This does all initial work needed for starting
@@ -37,6 +38,7 @@ void pcbInit(long address, long pageTable) {
 
 	processes = (Process *)calloc(MAX_PROCESSES, sizeof(Process));
 	timerQueueID = QCreate("timerQ");
+	processQueueID = QCreate("processQ");
 
 	if(timerQueueID == -1) {
 		aprintf("Couldn't create timerQueue\n");
@@ -109,7 +111,7 @@ void createInitialProcess(long address, long pageTable) {
 long getPid(char* name) {
 
 	//search for the process, and return its pid if found.
-	for(int i = 0; i<numProcesses; i++) {
+	/*for(int i = 0; i<numProcesses; i++) {
 
 		if(strcmp(name, processes[i].name) == 0) {
 
@@ -117,7 +119,19 @@ long getPid(char* name) {
 
 		}
 
-	}
+	}*/
+
+	int i = 0;
+	Process* proc;
+	do {
+
+		proc = (Process *)QWalk(processQueueID,i);
+
+		if(strcmp(name, proc->name) == 0) {
+			return proc->pid;
+		}
+
+	} while((int)proc != -1);
 
 	//we didn't find the process. return error message.
 	return -1;
@@ -175,13 +189,26 @@ Process currentProcess() {
 	long contextId = mmio.Field1;
 
 	//find the process with this context.
-	for(int i = 0; i<numProcesses; i++) {
+	/*for(int i = 0; i<numProcesses; i++) {
 
 		if(processes[i].contextId == contextId) {
 			return processes[i];
 		}
 
-	}
+	}*/
+	int i =0;
+	Process* proc;
+	do {
+
+		proc = (Process *)QWalk(processQueueID,i);
+
+		if(proc->contextId == contextId) {
+			return *proc;
+		}
+
+		++i;
+
+	} while((int)proc != -1);
 
 	Process errProc;
 	errProc.contextId = -1;
@@ -195,11 +222,13 @@ Process currentProcess() {
  * number of processes.
  */
 void storeProcess(Process process) {
-	processes[numProcesses] = process;
+	//processes[numProcesses] = process;
 
 	//update number of processes and the next pid in the sequence.
 	++currPidNumber;
 	++numProcesses;
+
+	QInsertOnTail(processQueueID,&process);
 }
 
 /**
@@ -209,27 +238,29 @@ void storeProcess(Process process) {
  * startingAddress: the address that this process should start at.
  * initialPriority: the priority that this process starts with.
  * pid: the address pointing to this process's pid.
+ * Returns 0 if creating the process was successful.
+ * Returns -1 if an error occurs.
  */
 long createProcess(char* processName, void* startingAddress, long initialPriority, long* pid) {
 
 	//process can't have an illegal priority
 	if(initialPriority < 0) {
-		return;
+		return -1;
 	}
 
 	//process can't have the same name as another process.
 	if(getPid(processName) != -1) {
-		return;
+		return -1;
 	}
 
 	//we can't have more than the maximum amount of processes.
 	if(numProcesses == MAX_PROCESSES) {
-		return;
+		return -1;
 	}
 
 	Process process;
 	process.name = processName;
-	process.startingAddress = startingAddress;
+	process.startingAddress = (long)startingAddress;
 	process.priority = initialPriority;
 	process.pid = currPidNumber;
 
@@ -244,7 +275,7 @@ long createProcess(char* processName, void* startingAddress, long initialPriorit
 
 	//check that this call was successful
 	if(mmio.Field4 != ERR_SUCCESS) {
-		aprintf("Could not initialize context.\n");
+		aprintf("Create Process ERROR: Could not initialize context.\n");
 		exit(0);
 	}
 
@@ -253,7 +284,7 @@ long createProcess(char* processName, void* startingAddress, long initialPriorit
 	storeProcess(process);
 
 	addToReadyQueue(process);
-
+	return 0;
 }
 
 /**

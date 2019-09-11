@@ -211,7 +211,10 @@ void svc(SYSTEM_CALL_DATA *SystemCallData) {
     		long pid = getPid(arg);
 
     		*SystemCallData->Argument[1] = pid;
-    		*SystemCallData->Argument[2] = ERR_SUCCESS;
+
+    		if(pid != -1) {
+    			*SystemCallData->Argument[2] = ERR_SUCCESS;
+    		}
 
     		break;
     	}
@@ -254,7 +257,12 @@ void svc(SYSTEM_CALL_DATA *SystemCallData) {
     		long initialPriority = (long)SystemCallData->Argument[2];
     		long* pid = (long*)SystemCallData->Argument[3];
     		long* errorReturned = (long*)SystemCallData->Argument[4];
-    		createProcess(processName,startingAddress,initialPriority,pid);
+    		int result = createProcess(processName,startingAddress,initialPriority,pid);
+
+    		if(result == 0) {
+    			*errorReturned = ERR_SUCCESS;
+    		}
+
     		break;
     	}
 
