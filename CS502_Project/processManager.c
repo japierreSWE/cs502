@@ -13,20 +13,19 @@
 #include "processManager.h"
 #include "diskManager.h"
 #include "dispatcher.h"
+#include "moreGlobals.h"
 
 void storeProcess(Process process);
 
 #define MAX_PROCESSES 15
 
 Process* processes; //a dynamically allocated array that will store created processes.
-int numProcesses = 0; //the current number of processes.
 
 long currPidNumber = 1;
 //the pid of a process is decided by a number sequence.
 //we get the next number in the sequence by incrementing currPidNumber.
 
 int timerQueueID;
-int processQueueID;
 
 /**
  * This does all initial work needed for starting
@@ -36,6 +35,7 @@ int processQueueID;
  */
 void pcbInit(long address, long pageTable) {
 
+	numProcesses = 0;
 	processes = (Process *)calloc(MAX_PROCESSES, sizeof(Process));
 	timerQueueID = QCreate("timerQ");
 	processQueueID = QCreate("processQ");
@@ -120,6 +120,13 @@ long getPid(char* name) {
 		}
 
 	}*/
+
+	//case for current process getPid.
+	if(strcmp(name, "") == 0) {
+		Process current = currentProcess();
+		return current.pid;
+	}
+
 
 	int i = 0;
 	Process* proc;
@@ -288,7 +295,7 @@ long createProcess(char* processName, void* startingAddress, long initialPriorit
 }
 
 /**
- * Suspends the process currently running.
+ * Suspends the process currently running by idling the processor.
  */
 void idle() {
 	//write to Z502Idle to suspend the process.

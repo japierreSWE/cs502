@@ -31,8 +31,10 @@
 #include             "string.h"
 #include             <stdlib.h>
 #include             <ctype.h>
-#include			 "processManager.h"
 #include			 "diskManager.h"
+#include			 "dispatcher.h"
+#include			 "processManager.h"
+#include 			 "moreGlobals.h"
 
 
 //  This is a mapping of system call nmemonics with definitions
@@ -167,20 +169,17 @@ void svc(SYSTEM_CALL_DATA *SystemCallData) {
     }
 
     switch(SystemCallData->SystemCallNumber) {
-
+    	//TODO: add locks to all queue usage.
     	case SYSNUM_TERMINATE_PROCESS: {
     		long pid = (long)SystemCallData->Argument[0];
+    		long result = terminateProcess(pid);
 
-    		if(pid == -1) {
-    			//shut down the current process.
-    			MEM_WRITE(Z502Halt, 0);
-    		} else if(pid == -2) {
-    			//terminate the current process and all children.
-
-    		} else {
-    			//terminate the process with the given pid.
-
+    		//if we did this successfully, change error.
+    		if(result != -1) {
+    			long* errorReturned = (long*)SystemCallData->Argument[1];
+    			*errorReturned = ERR_SUCCESS;
     		}
+
     		break;
 
     	}
@@ -259,6 +258,7 @@ void svc(SYSTEM_CALL_DATA *SystemCallData) {
     		long* errorReturned = (long*)SystemCallData->Argument[4];
     		int result = createProcess(processName,startingAddress,initialPriority,pid);
 
+    		//if we did this successfully, change error.
     		if(result == 0) {
     			*errorReturned = ERR_SUCCESS;
     		}

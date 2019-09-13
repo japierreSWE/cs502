@@ -8,23 +8,7 @@
 #ifndef PROCESSMANAGER_H_
 #define PROCESSMANAGER_H_
 
-//Struct for a process.
-//pid: the process ID.
-//priority: the process's current priority.
-//name: the name of the process.
-//startingAddress: the address the process begins execution at.
-//pageTable: the process's page table.
-//contextId: the process's contextId
-struct Process {
-	long pid;
-	long priority;
-	char* name;
-	long startingAddress;
-	long pageTable;
-	long contextId;
-};
-
-typedef struct Process Process;
+#include "moreGlobals.h"
 
 void pcbInit(long address, long pageTable);
 long getPid(char* name);
@@ -34,6 +18,9 @@ void createInitialProcess(long address, long pageTable);
 void idle();
 long createProcess(char* processName, void* startingAddress, long initialPriority, long* pid);
 
+
 int timerQueueID;
+int processQueueID;
+
 
 #endif /* PROCESSMANAGER_H_ */

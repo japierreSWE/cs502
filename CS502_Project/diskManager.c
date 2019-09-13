@@ -12,6 +12,7 @@
 #include "syscalls.h"
 #include "protos.h"
 #include "diskManager.h"
+#include "moreGlobals.h"
 #include "processManager.h"
 
 /**

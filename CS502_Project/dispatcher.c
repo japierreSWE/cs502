@@ -13,6 +13,7 @@
 #include "protos.h"
 #include "dispatcher.h"
 #include "processManager.h"
+#include "moreGlobals.h"
 
 /**
  * Sets up the ready queue for use.
@@ -80,5 +81,58 @@ void addToReadyQueue(Process process) {
 		}
 
 	} while((int)current != -1);
+
+}
+
+/**
+ * Terminates a process by deleting it from the OS's memory.
+ * Clears the process from all queues. OS shuts down if
+ * all processes have been terminated.
+ * Parameters:
+ * pid: the pid of the process to terminate.
+ * if equal to -1, terminates this process.
+ * if equal to -2, terminates this process and all descendants.
+ * Returns 0 if successful or -1 if there is an error.
+ */
+long terminateProcess(long pid) {
+
+	if(pid == -1) {
+		//shut down the current process.
+		//remove it from ready queue and process queue.
+		Process current = currentProcess();
+		QRemoveItem(readyQueueId,&current);
+		QRemoveItem(processQueueID,&current);
+		--numProcesses;
+
+		//if there are no remaining processes, shut down.
+		if(numProcesses == 0) {
+			MEM_WRITE(Z502Halt, 0);
+		}
+
+		return 0;
+
+	} else if(pid == -2) {
+		//terminate the current process and all children.
+		MEM_WRITE(Z502Halt, 0);
+		return 0;
+	} else {
+		//terminate the process with the given pid.
+
+		//try to remove it from process queue. if this doesn't
+		//work, the process doesn't exist.
+		Process current = currentProcess();
+		int processResult = QRemoveItem(processQueueID,&current);
+
+		if((int)processResult == -1) {
+
+			return -1;
+
+		} else {
+			//we successfully found it. remove it from all queues.
+			QRemoveItem(readyQueueId,&current);
+			return 0;
+		}
+
+	}
 
 }
