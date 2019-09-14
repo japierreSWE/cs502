@@ -52,7 +52,7 @@ int readyQueueIsEmpty() {
  * Adds a process to the ready queue.
  * Parameters: process: the process to be added.
  */
-void addToReadyQueue(Process process) {
+void addToReadyQueue(Process* process) {
 	//TODO: add process based on priority.
 	//QInsertOnTail(readyQueueId, &process);
 
@@ -67,9 +67,9 @@ void addToReadyQueue(Process process) {
 		//keep going until we find a process with a lower or equal priority.
 		if((int)current != -1) {
 
-			if(current->priority <= process.priority) {
+			if(current->priority <= process->priority) {
 
-				QInsert(readyQueueId,i,&process);
+				QInsert(readyQueueId,i,process);
 				break;
 
 			} else {
@@ -77,7 +77,7 @@ void addToReadyQueue(Process process) {
 			}
 		//if we reached the end, add this process to the tail.
 		} else {
-			QInsertOnTail(readyQueueId,&process);
+			QInsertOnTail(readyQueueId,process);
 		}
 
 	} while((int)current != -1);
@@ -99,9 +99,9 @@ long terminateProcess(long pid) {
 	if(pid == -1) {
 		//shut down the current process.
 		//remove it from ready queue and process queue.
-		Process current = currentProcess();
-		QRemoveItem(readyQueueId,&current);
-		QRemoveItem(processQueueID,&current);
+		Process* current = currentProcess();
+		QRemoveItem(readyQueueId,current);
+		QRemoveItem(processQueueID,current);
 		--numProcesses;
 
 		//if there are no remaining processes, shut down.
@@ -118,10 +118,14 @@ long terminateProcess(long pid) {
 	} else {
 		//terminate the process with the given pid.
 
-		//try to remove it from process queue. if this doesn't
-		//work, the process doesn't exist.
-		Process current = currentProcess();
-		int processResult = QRemoveItem(processQueueID,&current);
+		Process* process = getProcess(pid);
+
+		//if the process doesn't exist, return error.
+		if((int)process == -1) {
+			return -1;
+		}
+
+		int processResult = (int)QRemoveItem(processQueueID,process);
 
 		if((int)processResult == -1) {
 
@@ -129,7 +133,7 @@ long terminateProcess(long pid) {
 
 		} else {
 			//we successfully found it. remove it from all queues.
-			QRemoveItem(readyQueueId,&current);
+			QRemoveItem(readyQueueId,process);
 			return 0;
 		}
 

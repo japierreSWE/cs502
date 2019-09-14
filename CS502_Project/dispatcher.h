@@ -15,7 +15,7 @@ int readyQueueId;
 void initReadyQueue();
 void dispatch();
 int readyQueueIsEmpty();
-void addToReadyQueue(Process process);
+void addToReadyQueue(Process* process);
 long terminateProcess(long pid);
 
 #endif /* DISPATCHER_H_ */

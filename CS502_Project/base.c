@@ -213,6 +213,8 @@ void svc(SYSTEM_CALL_DATA *SystemCallData) {
 
     		if(pid != -1) {
     			*SystemCallData->Argument[2] = ERR_SUCCESS;
+    		} else {
+    			*SystemCallData->Argument[2] = -1;
     		}
 
     		break;
@@ -258,9 +260,13 @@ void svc(SYSTEM_CALL_DATA *SystemCallData) {
     		long* errorReturned = (long*)SystemCallData->Argument[4];
     		int result = createProcess(processName,startingAddress,initialPriority,pid);
 
-    		//if we did this successfully, change error.
-    		if(result == 0) {
+    		//if we ran successfully, make errorReturned = ERR_SUCCESS.
+    		if(result != -1) {
+    			*pid = result;
     			*errorReturned = ERR_SUCCESS;
+    		} else {
+    			//otherwise, make errorReturned = error value.
+    			*errorReturned = result;
     		}
 
     		break;
@@ -361,6 +367,11 @@ void osInit(int argc, char *argv[]) {
     } else if((argc > 1) && (strcmp(argv[1], "test3") == 0)) {
 
     	long address = (long)test3;
+    	pcbInit(address, (long)PageTable);
+
+    } else if((argc > 1) && (strcmp(argv[1], "test4") == 0)) {
+
+    	long address = (long)test4;
     	pcbInit(address, (long)PageTable);
 
     }

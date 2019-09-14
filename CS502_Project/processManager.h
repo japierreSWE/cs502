@@ -13,10 +13,11 @@
 void pcbInit(long address, long pageTable);
 long getPid(char* name);
 void startTimer(long timeAmount);
-Process currentProcess();
+Process* currentProcess();
 void createInitialProcess(long address, long pageTable);
 void idle();
 long createProcess(char* processName, void* startingAddress, long initialPriority, long* pid);
+Process* getProcess(long pid);
 
 
 int timerQueueID;

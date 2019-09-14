@@ -15,7 +15,7 @@
 #include "dispatcher.h"
 #include "moreGlobals.h"
 
-void storeProcess(Process process);
+void storeProcess(Process* process);
 
 #define MAX_PROCESSES 15
 
@@ -62,19 +62,19 @@ void createInitialProcess(long address, long pageTable) {
 	}
 
 	//make the process, then save it.
-	Process process;
-	process.name = ""; //current process's name is ""
-	process.priority = 0;
-	process.pid =  currPidNumber;
-	process.startingAddress = address;
-	process.pageTable = pageTable;
+	Process* process = (Process*)malloc(sizeof(Process));
+	process->name = ""; //current process's name is ""
+	process->priority = 0;
+	process->pid =  currPidNumber;
+	process->startingAddress = address;
+	process->pageTable = pageTable;
 
 	//start the process by initializing then starting context.
 	MEMORY_MAPPED_IO mmio;
 	mmio.Mode = Z502InitializeContext;
 	mmio.Field1 = 0;
-	mmio.Field2 = (long) process.startingAddress;
-	mmio.Field3 = (long) process.pageTable;
+	mmio.Field2 = (long) process->startingAddress;
+	mmio.Field3 = (long) process->pageTable;
 
 	MEM_WRITE(Z502Context, &mmio);   // Start of Make Context Sequence
 
@@ -84,7 +84,7 @@ void createInitialProcess(long address, long pageTable) {
 		exit(0);
 	}
 
-	process.contextId = mmio.Field1;
+	process->contextId = mmio.Field1;
 
 	storeProcess(process);
 
@@ -123,25 +123,54 @@ long getPid(char* name) {
 
 	//case for current process getPid.
 	if(strcmp(name, "") == 0) {
-		Process current = currentProcess();
-		return current.pid;
+		Process* current = currentProcess();
+		return current->pid;
 	}
 
 
 	int i = 0;
-	Process* proc;
+	Process* proc = (Process *)QWalk(processQueueID,i);
 	do {
-
-		proc = (Process *)QWalk(processQueueID,i);
 
 		if(strcmp(name, proc->name) == 0) {
 			return proc->pid;
 		}
 
+		++i;
+		proc = (Process *)QWalk(processQueueID,i);
+
 	} while((int)proc != -1);
 
 	//we didn't find the process. return error message.
 	return -1;
+
+}
+
+/**
+ * Retrieves the address of a process with the given pid.
+ * Parameters:
+ * pid: the pid of the process to find.
+ * Returns the address of the given process, or -1 if not found.
+ */
+Process* getProcess(long pid) {
+
+	int i = 0;
+	Process* proc = (Process *)QWalk(processQueueID,i);
+
+	//iterate through the queue until we find the process.
+	do {
+
+		if(pid == proc->pid) {
+			return proc;
+		}
+
+		++i;
+		proc = (Process *)QWalk(processQueueID,i);
+
+	} while((int)proc != -1);
+
+	//process wasn't found. return -1;
+	return (Process*)-1;
 
 }
 
@@ -155,8 +184,8 @@ long getPid(char* name) {
 void startTimer(long timeAmount) {
 
 	//place on timer queue.
-	Process curr = currentProcess();
-	QInsertOnTail(timerQueueID, &curr);
+	Process* curr = currentProcess();
+	QInsertOnTail(timerQueueID,&curr);
 
 	//TODO:wait until timer is free.
 
@@ -182,7 +211,7 @@ void startTimer(long timeAmount) {
  * running process. Returns a process
  * with a contextId of -1 if none is found.
  */
-Process currentProcess() {
+Process* currentProcess() {
 
 	//first, we get
 	MEMORY_MAPPED_IO mmio;
@@ -210,15 +239,15 @@ Process currentProcess() {
 		proc = (Process *)QWalk(processQueueID,i);
 
 		if(proc->contextId == contextId) {
-			return *proc;
+			return proc;
 		}
 
 		++i;
 
 	} while((int)proc != -1);
 
-	Process errProc;
-	errProc.contextId = -1;
+	Process* errProc = (Process*)malloc(sizeof(Process));
+	errProc->contextId = -1;
 	return errProc;
 
 }
@@ -228,14 +257,14 @@ Process currentProcess() {
  * updates the pid sequence and current
  * number of processes.
  */
-void storeProcess(Process process) {
+void storeProcess(Process* process) {
 	//processes[numProcesses] = process;
 
 	//update number of processes and the next pid in the sequence.
 	++currPidNumber;
 	++numProcesses;
 
-	QInsertOnTail(processQueueID,&process);
+	QInsertOnTail(processQueueID,process);
 }
 
 /**
@@ -265,18 +294,23 @@ long createProcess(char* processName, void* startingAddress, long initialPriorit
 		return -1;
 	}
 
-	Process process;
-	process.name = processName;
-	process.startingAddress = (long)startingAddress;
-	process.priority = initialPriority;
-	process.pid = currPidNumber;
+	Process* process = (Process*)malloc(sizeof(Process));
+	process->name = calloc(strlen(processName),sizeof(char));
+	strcpy(process->name,processName);
+	process->startingAddress = (long)startingAddress;
+	process->priority = initialPriority;
+	process->pid = currPidNumber;
+
+	void *pageTable = (void *) calloc(2, NUMBER_VIRTUAL_PAGES );
+	process->pageTable = (long)pageTable;
 
 	//start the process by initializing then starting context.
 	MEMORY_MAPPED_IO mmio;
 	mmio.Mode = Z502InitializeContext;
 	mmio.Field1 = 0;
-	mmio.Field2 = (long) process.startingAddress;
-	mmio.Field3 = (long) process.pageTable;
+	mmio.Field2 = (long) process->startingAddress;
+	mmio.Field3 = process->pageTable;
+	//TODO: give each process a page table.
 
 	MEM_WRITE(Z502Context, &mmio);   // Start of Make Context Sequence
 
@@ -286,12 +320,12 @@ long createProcess(char* processName, void* startingAddress, long initialPriorit
 		exit(0);
 	}
 
-	process.contextId = mmio.Field1;
+	process->contextId = mmio.Field1;
 
 	storeProcess(process);
 
 	addToReadyQueue(process);
-	return 0;
+	return process->pid;
 }
 
 /**
