@@ -64,7 +64,7 @@ void createInitialProcess(long address, long pageTable) {
 	//make the process, then save it.
 	Process* process = (Process*)malloc(sizeof(Process));
 	process->name = ""; //current process's name is ""
-	process->priority = 0;
+	process->priority = 10;
 	process->pid =  currPidNumber;
 	process->startingAddress = address;
 	process->pageTable = pageTable;
