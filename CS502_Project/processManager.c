@@ -185,7 +185,9 @@ void startTimer(long timeAmount) {
 
 	//place on timer queue.
 	Process* curr = currentProcess();
+	lock();
 	QInsertOnTail(timerQueueID,&curr);
+	unlock();
 
 	//TODO:wait until timer is free.
 
@@ -264,7 +266,9 @@ void storeProcess(Process* process) {
 	++currPidNumber;
 	++numProcesses;
 
+	lock();
 	QInsertOnTail(processQueueID,process);
+	unlock();
 }
 
 /**
@@ -310,7 +314,6 @@ long createProcess(char* processName, void* startingAddress, long initialPriorit
 	mmio.Field1 = 0;
 	mmio.Field2 = (long) process->startingAddress;
 	mmio.Field3 = process->pageTable;
-	//TODO: give each process a page table.
 
 	MEM_WRITE(Z502Context, &mmio);   // Start of Make Context Sequence
 

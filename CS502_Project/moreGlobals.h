@@ -26,8 +26,19 @@ struct Process {
 
 typedef struct Process Process;
 
+//struct for a timer request.
+//process: the process requesting the sleep.
+//sleepUntil: the hardware time that the process should sleep until.
+struct TimerRequest {
+	Process process;
+	long sleepUntil;
+};
+
 int timerQueueID;
 int processQueueID;
 int numProcesses; //the current number of processes.
+
+void lock();
+void unlock();
 
 #endif /* MOREGLOBALS_H_ */

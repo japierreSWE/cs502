@@ -85,7 +85,9 @@ void InterruptHandler(void) {
 
     	if(DeviceID == TIMER_INTERRUPT) {
     		aprintf("InterruptHandler: Timer interrupt found.\n");
+    		lock();
     		Process* interruptedProcess = (Process*)QRemoveHead(timerQueueID);
+    		unlock();
     	}
 
     	/** REMOVE THESE SIX LINES **/

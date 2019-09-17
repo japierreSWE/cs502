@@ -69,7 +69,9 @@ void addToReadyQueue(Process* process) {
 
 			if(current->priority <= process->priority) {
 
+				lock();
 				QInsert(readyQueueId,i,process);
+				unlock();
 				break;
 
 			} else {
@@ -77,7 +79,9 @@ void addToReadyQueue(Process* process) {
 			}
 		//if we reached the end, add this process to the tail.
 		} else {
+			lock();
 			QInsertOnTail(readyQueueId,process);
+			unlock();
 		}
 
 	} while((int)current != -1);
@@ -100,8 +104,13 @@ long terminateProcess(long pid) {
 		//shut down the current process.
 		//remove it from ready queue and process queue.
 		Process* current = currentProcess();
+		lock();
 		QRemoveItem(readyQueueId,current);
+		unlock();
+
+		lock();
 		QRemoveItem(processQueueID,current);
+		unlock();
 		--numProcesses;
 
 		//if there are no remaining processes, shut down.
@@ -125,7 +134,9 @@ long terminateProcess(long pid) {
 			return -1;
 		}
 
+		lock();
 		int processResult = (int)QRemoveItem(processQueueID,process);
+		unlock();
 
 		if((int)processResult == -1) {
 
@@ -133,7 +144,9 @@ long terminateProcess(long pid) {
 
 		} else {
 			//we successfully found it. remove it from all queues.
+			lock();
 			QRemoveItem(readyQueueId,process);
+			unlock();
 			return 0;
 		}
 
