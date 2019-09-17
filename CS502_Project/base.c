@@ -86,7 +86,7 @@ void InterruptHandler(void) {
     	if(DeviceID == TIMER_INTERRUPT) {
     		aprintf("InterruptHandler: Timer interrupt found.\n");
     		lock();
-    		Process* interruptedProcess = (Process*)QRemoveHead(timerQueueID);
+    		TimerRequest* interruptedProcess = (TimerRequest*)QRemoveHead(timerQueueID);
     		unlock();
     	}
 
@@ -190,14 +190,8 @@ void svc(SYSTEM_CALL_DATA *SystemCallData) {
     		//get the hardware time from the hardware.
     		//then send it back to the system call data.
 
-    		MEMORY_MAPPED_IO mmio;
-    		mmio.Mode = Z502ReturnValue;
-    		mmio.Field1 = 0;
-    		mmio.Field2 = 0;
-    		mmio.Field3 = 0;
-    		mmio.Field4 = 0;
-    		MEM_READ(Z502Clock, &mmio);
-    		*SystemCallData->Argument[0] = mmio.Field1;
+    		long time = getTimeOfDay();
+    		*SystemCallData->Argument[0] = time;
 
     		break;
 

@@ -25,8 +25,6 @@ long currPidNumber = 1;
 //the pid of a process is decided by a number sequence.
 //we get the next number in the sequence by incrementing currPidNumber.
 
-int timerQueueID;
-
 /**
  * This does all initial work needed for starting
  * the first process. This includes creating the first process,
@@ -37,8 +35,8 @@ void pcbInit(long address, long pageTable) {
 
 	numProcesses = 0;
 	processes = (Process *)calloc(MAX_PROCESSES, sizeof(Process));
-	timerQueueID = QCreate("timerQ");
 	processQueueID = QCreate("processQ");
+	createTimerQueue();
 
 	if(timerQueueID == -1) {
 		aprintf("Couldn't create timerQueue\n");
@@ -150,7 +148,8 @@ long getPid(char* name) {
  * Retrieves the address of a process with the given pid.
  * Parameters:
  * pid: the pid of the process to find.
- * Returns the address of the given process, or -1 if not found.
+ * Returns the address of the given process, or -1 if
+ * the process with the given pid wasn't found.
  */
 Process* getProcess(long pid) {
 
@@ -175,35 +174,42 @@ Process* getProcess(long pid) {
 }
 
 /**
- * Starts the hardware timer for this process and
- * adds the process to the timer queue.
+ * Starts the hardware timer and
+ * adds the currently running
+ * process to the timer queue.
  *
  * Parameters:
  * timeAmount- the amount of time units until the process receives a timer interrupt.
  */
 void startTimer(long timeAmount) {
 
-	//place on timer queue.
+	//start making timer request.
+	TimerRequest* request = (TimerRequest*)malloc(sizeof(TimerRequest));
 	Process* curr = currentProcess();
-	lock();
-	QInsertOnTail(timerQueueID,&curr);
-	unlock();
+	request->process = curr;
+	request->sleepUntil = getTimeOfDay() + timeAmount;
 
-	//TODO:wait until timer is free.
+	//place on timer queue.
+	int result = addToTimerQueue(request);
 
-	//start the hardware timer.
-	MEMORY_MAPPED_IO mmio;
-	mmio.Mode = Z502Start;
-	mmio.Field1 = timeAmount;
-	mmio.Field2 = 0;
-	mmio.Field3 = 0;
-	mmio.Field4 = 0;
-	MEM_WRITE(Z502Timer, &mmio);
+	//start the timer - if we need to
+	if(result == 0) {
 
-	//error handling for timer
-	if(mmio.Field4 != ERR_SUCCESS) {
-		aprintf("Error when starting timer, %ld\n", mmio.Field4);
-		exit(0);
+		//start the hardware timer.
+		MEMORY_MAPPED_IO mmio;
+		mmio.Mode = Z502Start;
+		mmio.Field1 = timeAmount;
+		mmio.Field2 = 0;
+		mmio.Field3 = 0;
+		mmio.Field4 = 0;
+		MEM_WRITE(Z502Timer, &mmio);
+
+		//error handling for timer
+		if(mmio.Field4 != ERR_SUCCESS) {
+			aprintf("Error when starting timer, %ld\n", mmio.Field4);
+			exit(0);
+		}
+
 	}
 
 }
