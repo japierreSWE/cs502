@@ -24,9 +24,10 @@ void initReadyQueue() {
 
 /**
  * The following code plays the role of the scheduler
- * in a uniprocessor operating system. It either starts
- * the next ready process with the greatest priority
- * or waits if there are no ready processes.
+ * in a uniprocessor operating system when a process
+ * is sleeping. It either startsthe next ready process
+ * with the greatest priority or waits if there
+ * are no ready processes.
  */
 void dispatch() {
 
@@ -36,7 +37,25 @@ void dispatch() {
 	}
 
 	//if we reach here, there is a ready process.
-	//TODO: get next process off of queue and start it.
+	//get next process off of queue and start it.
+	lock();
+	Process* nextProcess = QRemoveHead(readyQueueId);
+	unlock();
+
+	MEMORY_MAPPED_IO mmio;
+	mmio.Mode = Z502StartContext;
+	mmio.Field1 = nextProcess->contextId;
+	mmio.Field2 = START_NEW_CONTEXT_AND_SUSPEND;
+	mmio.Field3 = 0;
+	mmio.Field4 = 0;
+
+	MEM_WRITE(Z502Context, &mmio);
+
+	//if there was an error, stop.
+	if(mmio.Field4 == ERR_BAD_PARAM) {
+		aprint("Error starting another process from dispatch.\n");
+		exit(0);
+	}
 
 }
 
