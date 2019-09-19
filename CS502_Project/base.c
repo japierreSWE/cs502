@@ -86,8 +86,60 @@ void InterruptHandler(void) {
     	if(DeviceID == TIMER_INTERRUPT) {
     		aprintf("InterruptHandler: Timer interrupt found.\n");
     		lock();
-    		TimerRequest* interruptedProcess = (TimerRequest*)QRemoveHead(timerQueueID);
+    		TimerRequest* req = (TimerRequest*)QRemoveHead(timerQueueID);
     		unlock();
+
+    		//this timer request has been fulfilled.
+    		//make its process ready.
+    		lock();
+    		addToReadyQueue(req->process);
+    		unlock();
+
+    		TimerRequest* next = (TimerRequest*)QNextItemInfo(timerQueueID);
+
+    		//we now manage the other requests in the queue.
+    		//ones that have already ocurred go in the ready queue.
+    		//when we find one that hasn't, start the timer and then stop.
+    		while((int)next != -1) {
+
+    			//already occurred. put it in ready queue.
+    			if(getTimeOfDay() >= next->sleepUntil) {
+
+    				lock();
+    				QRemoveHead(timerQueueID);
+    				unlock();
+
+    				lock();
+    				addToReadyQueue(next->process);
+    				unlock();
+
+    				next = (TimerRequest*)QNextItemInfo(timerQueueID);
+
+    			} else {
+    				//means its sleepUntil is in the future.
+    				//start the timer, then break.
+
+    				//start the hardware timer.
+					MEMORY_MAPPED_IO mmio;
+					mmio.Mode = Z502Start;
+					mmio.Field1 = next->sleepUntil - getTimeOfDay();
+					mmio.Field2 = 0;
+					mmio.Field3 = 0;
+					mmio.Field4 = 0;
+					MEM_WRITE(Z502Timer, &mmio);
+
+					//error handling for timer
+					if(mmio.Field4 != ERR_SUCCESS) {
+						aprintf("Error when starting timer, %ld\n", mmio.Field4);
+						exit(0);
+					}
+
+					break;
+
+    			}
+
+    		}
+
     	}
 
     	/** REMOVE THESE SIX LINES **/
@@ -171,7 +223,6 @@ void svc(SYSTEM_CALL_DATA *SystemCallData) {
     }
 
     switch(SystemCallData->SystemCallNumber) {
-    	//TODO: add locks to all queue usage.
     	case SYSNUM_TERMINATE_PROCESS: {
     		long pid = (long)SystemCallData->Argument[0];
     		long result = terminateProcess(pid);
@@ -220,7 +271,8 @@ void svc(SYSTEM_CALL_DATA *SystemCallData) {
 
     		long time = (long)SystemCallData->Argument[0];
     		startTimer(time);
-    		idle();
+    		//idle();
+    		dispatch();
     		break;
     	}
 
@@ -350,7 +402,11 @@ void osInit(int argc, char *argv[]) {
 
     //control blocks for each test.
     //if we find a test, make the PCB for that test.
-    if((argc > 1) && (strcmp(argv[1], "test1") == 0)) {
+    if((argc > 1) && (strcmp(argv[1], "test0") == 0)) {
+    	long address = (long)test0;
+    	pcbInit(address, (long)PageTable);
+
+    } else if((argc > 1) && (strcmp(argv[1], "test1") == 0)) {
 
     	long address = (long)test1;
     	pcbInit(address, (long)PageTable);
@@ -368,6 +424,11 @@ void osInit(int argc, char *argv[]) {
     } else if((argc > 1) && (strcmp(argv[1], "test4") == 0)) {
 
     	long address = (long)test4;
+    	pcbInit(address, (long)PageTable);
+
+    } else if((argc > 1) && (strcmp(argv[1], "test5") == 0)) {
+
+    	long address = (long)test5;
     	pcbInit(address, (long)PageTable);
 
     }

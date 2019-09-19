@@ -53,7 +53,7 @@ void dispatch() {
 
 	//if there was an error, stop.
 	if(mmio.Field4 == ERR_BAD_PARAM) {
-		aprint("Error starting another process from dispatch.\n");
+		aprintf("Error starting another process from dispatch.\n");
 		exit(0);
 	}
 
@@ -72,7 +72,6 @@ int readyQueueIsEmpty() {
  * Parameters: process: the process to be added.
  */
 void addToReadyQueue(Process* process) {
-	//TODO: add process based on priority.
 	//QInsertOnTail(readyQueueId, &process);
 
 	int i = 0;
@@ -130,13 +129,20 @@ long terminateProcess(long pid) {
 		lock();
 		QRemoveItem(processQueueID,current);
 		unlock();
+
+		lock();
 		--numProcesses;
+		unlock();
 
 		//if there are no remaining processes, shut down.
 		if(numProcesses == 0) {
 			MEM_WRITE(Z502Halt, 0);
 		}
 
+		//we just terminated ourselves.
+		//so, we don't return.
+		//instead, we start another process.
+		dispatch();
 		return 0;
 
 	} else if(pid == -2) {
