@@ -14,6 +14,8 @@
 #define                  SUSPEND_UNTIL_LOCKED        TRUE
 #define                  DO_NOT_SUSPEND              FALSE
 
+int interruptPrints = 0;
+
 /**
  * Performs a hardware interlock.
  * It attempts to lock, suspending
@@ -124,6 +126,23 @@ int addToTimerQueue(TimerRequest* request) {
 
 		}
 
+	}
+
+}
+
+/**
+ * A method the facilitates printing from the
+ * interrupt handler. This method will only
+ * print the initial number of times for
+ * interrupts.
+ * Parameters:
+ * msg: the string to be printed.
+ */
+void interruptPrint(char msg[]) {
+
+	if(interruptPrints < INTERRUPT_PRINTS_LIMIT) {
+		aprintf(msg);
+		++interruptPrints;
 	}
 
 }

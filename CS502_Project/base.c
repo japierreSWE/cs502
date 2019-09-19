@@ -68,8 +68,8 @@ void InterruptHandler(void) {
 
     MEMORY_MAPPED_IO mmio;       // Enables communication with hardware
 
-    static BOOL  remove_this_from_your_interrupt_code = TRUE; /** TEMP **/
-    static INT32 how_many_interrupt_entries = 0;              /** TEMP **/
+    //static BOOL  remove_this_from_your_interrupt_code = TRUE; /** TEMP **/
+    //static INT32 how_many_interrupt_entries = 0;              /** TEMP **/
 
     // Get cause of interrupt
     mmio.Mode = Z502GetInterruptInfo;
@@ -84,7 +84,7 @@ void InterruptHandler(void) {
     	Status = mmio.Field2;
 
     	if(DeviceID == TIMER_INTERRUPT) {
-    		aprintf("InterruptHandler: Timer interrupt found.\n");
+    		interruptPrint("InterruptHandler: Timer interrupt found.\n");
     		lock();
     		TimerRequest* req = (TimerRequest*)QRemoveHead(timerQueueID);
     		unlock();
@@ -143,11 +143,11 @@ void InterruptHandler(void) {
     	}
 
     	/** REMOVE THESE SIX LINES **/
-		how_many_interrupt_entries++; /** TEMP **/
-		if (remove_this_from_your_interrupt_code && (how_many_interrupt_entries < 10)) {
+		/*how_many_interrupt_entries++; TEMP **/
+		/*if (remove_this_from_your_interrupt_code && (how_many_interrupt_entries < 10)) {
 			aprintf("InterruptHandler: Found device ID %d with status %d\n",
 					DeviceID, Status);
-		}
+		}*/
 
     	mmio.Field1 = mmio.Field2 = mmio.Field3 = mmio.Field4 = 0;
     	MEM_READ(Z502InterruptDevice, &mmio);
@@ -155,9 +155,7 @@ void InterruptHandler(void) {
     }
 
     if (mmio.Field4 != ERR_SUCCESS) {
-    	aprintf("InterruptHandler: Could not receive interrupt info. InterruptHandler has either finished receiving interrupts or has failed to receive the interrupt.\n");
-        //aprintf( "The InterruptDevice call in the InterruptHandler has failed.\n");
-        //aprintf("The DeviceId and Status that were returned are not valid.\n");
+    	interruptPrint("InterruptHandler: Could not receive interrupt info. InterruptHandler has either finished receiving interrupts or has failed to receive the interrupt.\n");
     }
 
 }           // End of InterruptHandler
