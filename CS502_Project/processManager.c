@@ -246,6 +246,8 @@ Process* currentProcess() {
 
 		proc = (Process *)QWalk(processQueueID,i);
 
+		if((int)proc == -1) break;
+
 		if(proc->contextId == contextId) {
 			return proc;
 		}

@@ -15,6 +15,8 @@
 #include "processManager.h"
 #include "moreGlobals.h"
 
+void schedulePrint();
+
 /**
  * Sets up the ready queue for use.
  */
@@ -24,8 +26,8 @@ void initReadyQueue() {
 
 /**
  * The following code plays the role of the scheduler
- * in a uniprocessor operating system when a process
- * is sleeping. It either startsthe next ready process
+ * in a uniprocessor operating system.
+ * It either starts the next ready process
  * with the greatest priority or waits if there
  * are no ready processes.
  */
@@ -35,6 +37,8 @@ void dispatch() {
 	while(readyQueueIsEmpty()) {
 		CALL();
 	}
+
+	schedulePrint();
 
 	//if we reach here, there is a ready process.
 	//get next process off of queue and start it.
@@ -56,6 +60,82 @@ void dispatch() {
 		aprintf("Error starting another process from dispatch.\n");
 		exit(0);
 	}
+
+}
+
+/**
+ * Conducts a call to the scheduler printing
+ * mechanism.
+ */
+void schedulePrint() {
+
+	SP_INPUT_DATA* spData = malloc(sizeof(SP_INPUT_DATA));
+	strcpy(spData->TargetAction, "Dispatch");
+
+	if(currentProcess()->contextId != -1) {
+		spData->CurrentlyRunningPID = (INT16)(currentProcess()->pid);
+	} else {
+		//this means that the PID doesn't exist.
+		//ie. the process was deleted.
+		spData->CurrentlyRunningPID = -1;
+	}
+
+	spData->NumberOfDiskSuspendedProcesses = 0;
+	spData->NumberOfMessageSuspendedProcesses = 0;
+	spData->NumberOfProcSuspendedProcesses = 0;
+	spData->NumberOfReadyProcesses = 0;
+	spData->NumberOfRunningProcesses = 0;
+	spData->NumberOfTerminatedProcesses = 0;
+	spData->NumberOfTimerSuspendedProcesses = 0;
+
+	//give all arrays default values
+	for(int i = 0; i<SP_MAX_NUMBER_OF_PIDS; i++) {
+
+		spData->DiskSuspendedProcessPIDs[i] = 0;
+		spData->MessageSuspendedProcessPIDs[i] = 0;
+		spData->ProcSuspendedProcessPIDs[i] = 0;
+		spData->ReadyProcessPIDs[i] = 0;
+		spData->RunningProcessPIDs[i] = 0;
+		spData->TerminatedProcessPIDs[i] = 0;
+		spData->TimerSuspendedProcessPIDs[i] = 0;
+
+	}
+
+	int i = 0;
+	Process* currReady = (Process*)QWalk(readyQueueId,i);
+	spData->NumberOfReadyProcesses = 0;
+
+	//count the # of ready processes, store their pids.
+	while((int)currReady != -1) {
+
+		++spData->NumberOfReadyProcesses;
+		spData->ReadyProcessPIDs[i] = (INT16)currReady->pid;
+
+		++i;
+		currReady = (Process*)QWalk(readyQueueId,i);
+
+	}
+
+	//count the # of timer suspended processes, store their pids.
+	i = 0;
+	TimerRequest* currTimer = (TimerRequest*)QWalk(timerQueueID,i);
+	spData->NumberOfTimerSuspendedProcesses = 0;
+
+	while((int)currTimer != -1) {
+
+		++spData->NumberOfTimerSuspendedProcesses;
+		spData->TimerSuspendedProcessPIDs[i] = (INT16)currTimer->process->pid;
+
+		++i;
+		currTimer = (TimerRequest*)QWalk(timerQueueID, i);
+
+	}
+
+	//print using the schedule printer.
+	CALL(SPPrintLine(spData));
+
+	//prevent memory leak.
+	free(spData);
 
 }
 
