@@ -20,5 +20,6 @@ int readyQueueIsEmpty();
 void addToReadyQueue(Process* process);
 long terminateProcess(long pid);
 long suspendProcess(long pid);
+long resumeProcess(long pid);
 
 #endif /* DISPATCHER_H_ */

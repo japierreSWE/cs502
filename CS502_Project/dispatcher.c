@@ -261,6 +261,15 @@ long terminateProcess(long pid) {
 			lock();
 			QRemoveItem(readyQueueId,process);
 			unlock();
+
+			lock();
+			QRemoveItem(timerQueueID, process);
+			unlock();
+
+			lock();
+			QRemoveItem(suspendQueueId, process);
+			unlock();
+
 			--numProcesses;
 			return 0;
 		}
@@ -362,12 +371,12 @@ long suspendProcess(long pid) {
 	}
 
 	int i = 0;
-	Process* curr = QWalk(readyQueueId, i);
+	Process* curr = (Process*)QWalk(readyQueueId, i);
 
 	//iterate until we find the pid we're looking for.
 	while(curr->pid != pid) {
 		++i;
-		curr = QWalk(readyQueueId, i);
+		curr = (Process*)QWalk(readyQueueId, i);
 	}
 
 	//remove from ready queue, then add to suspend queue.
@@ -378,6 +387,54 @@ long suspendProcess(long pid) {
 	lock();
 	QInsertOnTail(suspendQueueId,curr);
 	unlock();
+
+	return 0;
+
+}
+
+/**
+ * Resumes a process by removing
+ * it from the suspend queue and
+ * placing it on the ready queue.
+ * Parameters:
+ * pid: the pid of the process to resume.
+ * Returns 0 if successful or -1 if there
+ * is an error.
+ */
+long resumeProcess(long pid) {
+
+	//cannot resume processes
+	//that aren't suspended.
+	if(!inSuspendQueue(pid)) {
+		return -1;
+	}
+
+	//cannot resume process that's
+	//currently ready.
+	if(inReadyQueue(pid)) {
+		return -1;
+	}
+
+	//cannot resume ourselves.
+	if(pid == currentProcess()->pid) {
+		return -1;
+	}
+
+	int i = 0;
+	Process* curr = (Process*)QWalk(suspendQueueId,i);
+
+	//iterate through suspend queue until we find the process.
+	while(curr->pid != pid) {
+		++i;
+		curr = (Process*)QWalk(suspendQueueId,i);
+	}
+
+	//remove from suspend queue and add to ready queue.
+	lock();
+	QRemoveItem(suspendQueueId, curr);
+	unlock();
+
+	addToReadyQueue(curr);
 
 	return 0;
 

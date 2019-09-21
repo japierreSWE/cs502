@@ -335,6 +335,21 @@ void svc(SYSTEM_CALL_DATA *SystemCallData) {
 
     	}
 
+    	case SYSNUM_RESUME_PROCESS: {
+
+    		long pid = (long)SystemCallData->Argument[0];
+    		long result = resumeProcess(pid);
+    		long* errorReturned = (long*)SystemCallData->Argument[1];
+
+    		if(result == 0) {
+    			*errorReturned = ERR_SUCCESS;
+    		} else {
+    			*errorReturned = result;
+    		}
+
+    		break;
+    	}
+
     }
 
 }                                               // End of svc
