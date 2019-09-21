@@ -16,12 +16,21 @@
 #include "moreGlobals.h"
 
 void schedulePrint();
+int inReadyQueue(long pid);
+int inSuspendQueue(long pid);
 
 /**
  * Sets up the ready queue for use.
  */
 void initReadyQueue() {
 	readyQueueId = QCreate("readyQueue");
+}
+
+/**
+ * Sets up the suspend queue for use.
+ */
+void initSuspendQueue() {
+	suspendQueueId = QCreate("susQueue");
 }
 
 /**
@@ -187,7 +196,7 @@ void addToReadyQueue(Process* process) {
 }
 
 /**
- * Terminates a process by deleting it from the OS's memory.
+ * Terminates a process by removing it from the OS's memory.
  * Clears the process from all queues. OS shuts down if
  * all processes have been terminated.
  * Parameters:
@@ -252,9 +261,124 @@ long terminateProcess(long pid) {
 			lock();
 			QRemoveItem(readyQueueId,process);
 			unlock();
+			--numProcesses;
 			return 0;
 		}
 
 	}
+
+}
+
+/**
+ * Determines whether a process with
+ * a given pid can be found in the
+ * ready queue.
+ * Parameters:
+ * pid: the pid of the process to find in the ready queue.
+ * Returns true if the process is in the ready queue and
+ * false otherwise.
+ */
+int inReadyQueue(long pid) {
+
+	int i = 0;
+	Process* curr = QWalk(readyQueueId, i);
+
+	//iterate through the queue until
+	//we find the pid.
+	while((int)curr != -1) {
+
+		if(curr->pid == pid) {
+			return 1;
+		}
+
+		++i;
+		curr = QWalk(readyQueueId, i);
+
+	}
+
+	//we didn't find it. return false.
+	return 0;
+
+}
+
+/**
+ * Determines whether a process with
+ * a given pid is in the suspend queue.
+ * Parameters:
+ * pid: the pid of the process to find in the
+ * suspend queue.
+ * Returns true if the process is in the suspend queue
+ * and false otherwise.
+ */
+int inSuspendQueue(long pid) {
+
+	int i = 0;
+	Process* curr = QWalk(suspendQueueId, i);
+
+	//iterate through the queue until
+	//we find the pid.
+	while((int)curr != -1) {
+
+		if(curr->pid == pid) {
+			return 1;
+		}
+
+		++i;
+		curr = QWalk(suspendQueueId, i);
+
+	}
+
+	//we didn't find it. return false.
+	return 0;
+
+}
+
+/**
+ * Suspends a process by removing the
+ * process with the given pid from
+ * the ready queue and placing it
+ * on the suspend queue.
+ * Parameters:
+ * pid: the pid of the process to suspend.
+ * Returns -1 if there is an error or 0 if successful.
+ */
+long suspendProcess(long pid) {
+
+	//we can't suspend a process
+	//not in the ready queue.
+	if(!inReadyQueue(pid)) {
+		return -1;
+	}
+
+	//we can't suspend a process
+	//that's already suspended.
+	if(inSuspendQueue(pid)) {
+		return -1;
+	}
+
+	//we can't suspend ourselves.
+	if(pid == currentProcess()->pid) {
+		return -1;
+	}
+
+	int i = 0;
+	Process* curr = QWalk(readyQueueId, i);
+
+	//iterate until we find the pid we're looking for.
+	while(curr->pid != pid) {
+		++i;
+		curr = QWalk(readyQueueId, i);
+	}
+
+	//remove from ready queue, then add to suspend queue.
+	lock();
+	QRemoveItem(readyQueueId,curr);
+	unlock();
+
+	lock();
+	QInsertOnTail(suspendQueueId,curr);
+	unlock();
+
+	return 0;
 
 }

@@ -318,6 +318,23 @@ void svc(SYSTEM_CALL_DATA *SystemCallData) {
     		break;
     	}
 
+    	case SYSNUM_SUSPEND_PROCESS: {
+
+    		long pid = (long)SystemCallData->Argument[0];
+    		long result = suspendProcess(pid);
+    		long* errorReturned = (long*)SystemCallData->Argument[1];
+
+    		//if successful, ERR_SUCCESS.
+    		if(result == 0) {
+    			*errorReturned = ERR_SUCCESS;
+    		} else {
+    			*errorReturned = result;
+    		}
+
+    		break;
+
+    	}
+
     }
 
 }                                               // End of svc

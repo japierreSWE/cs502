@@ -45,6 +45,7 @@ void pcbInit(long address, long pageTable) {
 
 	initDiskManager();
 	initReadyQueue();
+	initSuspendQueue();
 	createInitialProcess(address, pageTable);
 
 }
