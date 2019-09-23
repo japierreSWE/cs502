@@ -168,7 +168,7 @@ void addToReadyQueue(Process* process) {
 
 	do {
 
-		current = QWalk(readyQueueId, 0);
+		current = QWalk(readyQueueId, i);
 
 		//if we haven't reached the end of the queue,
 		//keep going until we find a process with a lower or equal priority.

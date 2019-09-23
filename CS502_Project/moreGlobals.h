@@ -8,8 +8,6 @@
 #ifndef MOREGLOBALS_H_
 #define MOREGLOBALS_H_
 
-#define INTERRUPT_PRINTS_LIMIT 20
-
 //Struct for a process.
 //pid: the process ID.
 //priority: the process's current priority.

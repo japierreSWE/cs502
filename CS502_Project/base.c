@@ -92,9 +92,7 @@ void InterruptHandler(void) {
 
     		//this timer request has been fulfilled.
     		//make its process ready.
-    		lock();
     		addToReadyQueue(req->process);
-    		unlock();
 
     		TimerRequest* next = (TimerRequest*)QNextItemInfo(timerQueueID);
 
@@ -156,7 +154,7 @@ void InterruptHandler(void) {
     	++interruptsFound;
     }
 
-    if (mmio.Field4 != ERR_SUCCESS && interruptsFound > 0) {
+    if (mmio.Field4 != ERR_SUCCESS && interruptsFound == 0) {
     	interruptPrint("InterruptHandler: Could not receive interrupt info. InterruptHandler has failed to receive the interrupt.\n");
     }
 
@@ -466,6 +464,11 @@ void osInit(int argc, char *argv[]) {
     } else if((argc > 1) && (strcmp(argv[1], "test6") == 0)) {
 
     	long address = (long)test6;
+    	pcbInit(address, (long)PageTable);
+
+    } else if((argc > 1) && (strcmp(argv[1], "test7") == 0)) {
+
+    	long address = (long)test7;
     	pcbInit(address, (long)PageTable);
 
     }

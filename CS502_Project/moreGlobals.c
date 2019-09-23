@@ -13,6 +13,7 @@
 #define                  DO_UNLOCK                   0
 #define                  SUSPEND_UNTIL_LOCKED        TRUE
 #define                  DO_NOT_SUSPEND              FALSE
+#define INTERRUPT_PRINTS_LIMIT 20
 
 int interruptPrints = 0;
 
@@ -105,6 +106,9 @@ int addToTimerQueue(TimerRequest* request) {
 					return -1;
 
 				}
+
+				++i;
+				current = (TimerRequest*)QWalk(timerQueueID, i);
 
 			}
 
