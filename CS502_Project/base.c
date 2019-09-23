@@ -65,6 +65,7 @@ char *call_names[] = {"MemRead  ", "MemWrite ", "ReadMod  ", "GetTime  ",
 void InterruptHandler(void) {
     INT32 DeviceID;
     INT32 Status;
+    int interruptsFound = 0;
 
     MEMORY_MAPPED_IO mmio;       // Enables communication with hardware
 
@@ -152,10 +153,11 @@ void InterruptHandler(void) {
     	mmio.Field1 = mmio.Field2 = mmio.Field3 = mmio.Field4 = 0;
     	MEM_READ(Z502InterruptDevice, &mmio);
 
+    	++interruptsFound;
     }
 
-    if (mmio.Field4 != ERR_SUCCESS) {
-    	interruptPrint("InterruptHandler: Could not receive interrupt info. InterruptHandler has either finished receiving interrupts or has failed to receive the interrupt.\n");
+    if (mmio.Field4 != ERR_SUCCESS && interruptsFound > 0) {
+    	interruptPrint("InterruptHandler: Could not receive interrupt info. InterruptHandler has failed to receive the interrupt.\n");
     }
 
 }           // End of InterruptHandler
@@ -459,6 +461,11 @@ void osInit(int argc, char *argv[]) {
     } else if((argc > 1) && (strcmp(argv[1], "test5") == 0)) {
 
     	long address = (long)test5;
+    	pcbInit(address, (long)PageTable);
+
+    } else if((argc > 1) && (strcmp(argv[1], "test6") == 0)) {
+
+    	long address = (long)test6;
     	pcbInit(address, (long)PageTable);
 
     }
