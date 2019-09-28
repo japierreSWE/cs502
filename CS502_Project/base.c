@@ -350,6 +350,24 @@ void svc(SYSTEM_CALL_DATA *SystemCallData) {
     		break;
     	}
 
+    	case SYSNUM_CHANGE_PRIORITY: {
+
+    		long pid = (long)SystemCallData->Argument[0];
+    		long newPriority = (long)SystemCallData->Argument[1];
+    		long* errorReturned = (long*)SystemCallData->Argument[2];
+
+    		long result = changePriority(pid, newPriority);
+
+    		if(result == 0) {
+				*errorReturned = ERR_SUCCESS;
+			} else {
+				*errorReturned = result;
+			}
+
+    		break;
+
+    	}
+
     }
 
 }                                               // End of svc
@@ -469,6 +487,11 @@ void osInit(int argc, char *argv[]) {
     } else if((argc > 1) && (strcmp(argv[1], "test7") == 0)) {
 
     	long address = (long)test7;
+    	pcbInit(address, (long)PageTable);
+
+    } else if((argc > 1) && (strcmp(argv[1], "test8") == 0)) {
+
+    	long address = (long)test8;
     	pcbInit(address, (long)PageTable);
 
     }

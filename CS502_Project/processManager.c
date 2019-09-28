@@ -341,6 +341,39 @@ long createProcess(char* processName, void* startingAddress, long initialPriorit
 }
 
 /**
+ * Changes the priority of a certain process
+ * to a new priority.
+ * Parameters:
+ * pid: the pid of the process whose priority should be changed.
+ * newPriority: the new value of its priority.
+ * Returns -1 if an error occurs or 0 if successful.
+ */
+long changePriority(long pid, long newPriority) {
+
+	Process* process = getProcess(pid);
+
+	//non-existent process or illegal priority.
+	if((int)process == -1 || newPriority < 0) {
+		return -1;
+	}
+
+	process->priority = newPriority;
+
+	//the process must go to a new position in the ready queue
+	//since it has a new priority.
+	if((int)QItemExists(readyQueueId,process) != -1) {
+
+		lock();
+		QRemoveItem(readyQueueId,process);
+		unlock();
+
+		addToReadyQueue(process);
+
+	}
+	return 0;
+}
+
+/**
  * Suspends the process currently running by idling the processor.
  */
 void idle() {

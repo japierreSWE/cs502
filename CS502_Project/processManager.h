@@ -18,6 +18,7 @@ void createInitialProcess(long address, long pageTable);
 void idle();
 long createProcess(char* processName, void* startingAddress, long initialPriority, long* pid);
 Process* getProcess(long pid);
+long changePriority(long pid, long newPriority);
 
 
 int timerQueueID;
