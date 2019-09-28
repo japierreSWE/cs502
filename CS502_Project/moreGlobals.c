@@ -9,6 +9,7 @@
 #include "moreGlobals.h"
 #include "global.h"
 #include "protos.h"
+#include "limits.h"
 #define                  DO_LOCK                     1
 #define                  DO_UNLOCK                   0
 #define                  SUSPEND_UNTIL_LOCKED        TRUE
@@ -16,6 +17,7 @@
 #define INTERRUPT_PRINTS_LIMIT 20
 
 int interruptPrints = 0;
+unsigned int timerQueueHead = UINT_MAX;
 
 /**
  * Performs a hardware interlock.
@@ -71,66 +73,26 @@ int addToTimerQueue(TimerRequest* request) {
 
 	long sleepUntil = request->sleepUntil;
 
+	//get the head before we insert.
 	TimerRequest* head = (TimerRequest*)QNextItemInfo(timerQueueID);
 
-	//the queue is empty. add this request
-	//and then start the timer.
-	if((int)head == -1) {
-		lock();
-		QInsertOnTail(timerQueueID,request);
-		unlock();
-		return 0;
-	} else {
-		//the queue isn't empty.
+	lock();
+	QInsert(timerQueueID, sleepUntil, request);
+	unlock();
 
-		//if our delay ends after the head's delay,
-		//we have to put this request in the right order.
-		if(head->sleepUntil <= sleepUntil) {
 
-			int i = 1;
-			TimerRequest* current = (TimerRequest*)QWalk(timerQueueID, i);
+	if((int)head != -1) {
 
-			//iterate over the queue
-			//until we find a request
-			//whose delay is after this one's.
-			//insert it in that position.
-			//no need to start timer.
+		//if our sleep time ends before
+		//the head's...
+		if(head->sleepUntil > sleepUntil) {
 
-			while((int)current != -1) {
-
-				if(request->sleepUntil <= current->sleepUntil) {
-
-					lock();
-					QInsert(timerQueueID,i,request);
-					unlock();
-					return -1;
-
-				}
-
-				++i;
-				current = (TimerRequest*)QWalk(timerQueueID, i);
-
-			}
-
-			//if we iterated through the whole
-			//queue, add this request to the
-			//end. no need to start timer.
-			lock();
-			QInsertOnTail(timerQueueID,request);
-			unlock();
-			return -1;
-
-		} else {
-			//our delay ends before the head's delay.
-			//add request to head and start timer.
-			lock();
-			QInsert(timerQueueID,0,request);
-			unlock();
 			return 0;
 
-		}
+		} else return -1;
 
-	}
+	} else return 0;
+	//start the timer if nothing is on the queue.
 
 }
 

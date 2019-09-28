@@ -140,6 +140,21 @@ void schedulePrint() {
 
 	}
 
+	//count the # of suspended processes, store their pids.
+	i = 0;
+	Process* currSuspend = (Process*)QWalk(suspendQueueId, i);
+	spData->NumberOfProcSuspendedProcesses = 0;
+
+	while((int)currSuspend != -1) {
+
+		++spData->NumberOfProcSuspendedProcesses;
+		spData->ProcSuspendedProcessPIDs[i] = (INT16)currSuspend->pid;
+
+		++i;
+		currSuspend = (Process*)QWalk(suspendQueueId, i);
+
+	}
+
 	//print using the schedule printer.
 	CALL(SPPrintLine(spData));
 
@@ -162,37 +177,7 @@ int readyQueueIsEmpty() {
  */
 void addToReadyQueue(Process* process) {
 	//QInsertOnTail(readyQueueId, &process);
-
-	int i = 0;
-	Process* current;
-
-	do {
-
-		current = QWalk(readyQueueId, i);
-
-		//if we haven't reached the end of the queue,
-		//keep going until we find a process with a lower or equal priority.
-		if((int)current != -1) {
-
-			if(current->priority <= process->priority) {
-
-				lock();
-				QInsert(readyQueueId,i,process);
-				unlock();
-				break;
-
-			} else {
-				++i;
-			}
-		//if we reached the end, add this process to the tail.
-		} else {
-			lock();
-			QInsertOnTail(readyQueueId,process);
-			unlock();
-		}
-
-	} while((int)current != -1);
-
+	QInsert(readyQueueId, process->priority, process);
 }
 
 /**
