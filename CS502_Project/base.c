@@ -139,6 +139,17 @@ void InterruptHandler(void) {
 
     		}
 
+    	} else if(DeviceID == DISK_INTERRUPT_DISK0 || DeviceID == DISK_INTERRUPT_DISK1) {
+
+    		interruptPrint("Disk interrupt\n");
+
+    		if(Status != ERR_SUCCESS) {
+
+    			aprintf("Disk Interrupt error. Status was: %d", Status);
+    			exit(0);
+
+    		}
+
     	}
 
     	/** REMOVE THESE SIX LINES **/
