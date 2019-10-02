@@ -379,6 +379,43 @@ void svc(SYSTEM_CALL_DATA *SystemCallData) {
 
     	}
 
+    	case SYSNUM_SEND_MESSAGE: {
+
+    		long targetPID = (long)SystemCallData->Argument[0];
+    		char* messageBuffer = (char*)SystemCallData->Argument[1];
+    		long msgSendLength = (long)SystemCallData->Argument[2];
+    		long* errorReturned = (long*)SystemCallData->Argument[3];
+
+    		long result = sendMessage(targetPID,messageBuffer,msgSendLength);
+
+    		if(result == 0) {
+				*errorReturned = ERR_SUCCESS;
+			} else {
+				*errorReturned = result;
+			}
+
+    		break;
+    	}
+
+    	case SYSNUM_RECEIVE_MESSAGE: {
+
+    		long sourcePID = (long)SystemCallData->Argument[0];
+    		char* messageBuffer = (char*)SystemCallData->Argument[1];
+    		long msgReceiveLength = (long)SystemCallData->Argument[2];
+    		long* msgSendLength = (long*)SystemCallData->Argument[3];
+    		long* msgSenderPid = (long*)SystemCallData->Argument[4];
+    		long* errorReturned = (long*)SystemCallData->Argument[5];
+
+    		long result = receiveMessage(sourcePID, messageBuffer, msgReceiveLength, msgSendLength, msgSenderPid);
+
+    		if(result == 0) {
+				*errorReturned = ERR_SUCCESS;
+			} else {
+				*errorReturned = result;
+			}
+
+    	}
+
     }
 
 }                                               // End of svc
@@ -503,6 +540,11 @@ void osInit(int argc, char *argv[]) {
     } else if((argc > 1) && (strcmp(argv[1], "test8") == 0)) {
 
     	long address = (long)test8;
+    	pcbInit(address, (long)PageTable);
+
+    } else if((argc > 1) && (strcmp(argv[1], "test9") == 0)) {
+
+    	long address = (long)test9;
     	pcbInit(address, (long)PageTable);
 
     }

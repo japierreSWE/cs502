@@ -46,6 +46,8 @@ void pcbInit(long address, long pageTable) {
 	initDiskManager();
 	initReadyQueue();
 	initSuspendQueue();
+	initMessageQueue();
+	initMsgSuspendQueue();
 	createInitialProcess(address, pageTable);
 
 }
@@ -349,6 +351,15 @@ long createProcess(char* processName, void* startingAddress, long initialPriorit
  * Returns -1 if an error occurs or 0 if successful.
  */
 long changePriority(long pid, long newPriority) {
+
+	if(pid == -1) {
+
+		if(newPriority < 0) return -1;
+
+		Process* current = currentProcess();
+		current->priority = newPriority;
+		return 0;
+	}
 
 	Process* process = getProcess(pid);
 

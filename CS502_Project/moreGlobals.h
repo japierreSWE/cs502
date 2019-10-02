@@ -4,6 +4,11 @@
  *  Created on: Sep 13, 2019
  *      Author: jean-philippe
  */
+//moreGlobals.h and moreGlobals.c are intended to
+//contain code that will be needed in more than
+//one place in the program that aren't specific to
+//process management, disk management, or dispatching.
+
 
 #ifndef MOREGLOBALS_H_
 #define MOREGLOBALS_H_
@@ -36,9 +41,28 @@ struct TimerRequest {
 
 typedef struct TimerRequest TimerRequest;
 
+//struct for an IPC message.
+//messageContent: the contents of the message.
+//messageLength: how long this message is.
+//from: the process this message is coming from.
+//to: the process this message is being sent to.
+//broadcast: boolean whether this is a broadcast.
+struct Message {
+	char* messageContent;
+	long messageLength;
+	long from;
+	long to;
+};
+
+typedef struct Message Message;
+
 int timerQueueID;
 int processQueueID;
 int numProcesses; //the current number of processes.
+int messageQueueID; //queue containing messages.
+int msgSuspendQueueID; //queue containing processes waiting for a message.
+
+int numMessages; //number of messages in the queue.
 
 void lock();
 void unlock();
@@ -46,5 +70,9 @@ long getTimeOfDay();
 void createTimerQueue();
 int addToTimerQueue(TimerRequest* request);
 void interruptPrint(char msg[]);
+void initMessageQueue();
+void initMsgSuspendQueue();
+long sendMessage(long targetPID, char* messageBuffer, long msgSendLength);
+long receiveMessage(long sourcePID, char* receiveBuffer, long receiveLength, long* sendLength, long* senderPid);
 
 #endif /* MOREGLOBALS_H_ */
