@@ -14,6 +14,7 @@
 #include "diskManager.h"
 #include "moreGlobals.h"
 #include "processManager.h"
+#include "dispatcher.h"
 
 /**
  * Initializes the disk manager by preparing the queues
@@ -55,7 +56,20 @@ void writeToDisk(long diskID, long sector, char* writeBuffer) {
 	mmio.Field2 = sector;
 	mmio.Field3 = (long)writeBuffer;
 
+	if(getDiskStatus(diskID) == DEVICE_IN_USE) {
+		lock();
+		QInsertOnTail(diskQueueIds[diskID], currentProcess());
+		unlock();
+		dispatch();
+	}
+
 	MEM_WRITE(Z502Disk, &mmio);
+
+	//we have to wait for the disk to finish before we continue.
+	lock();
+	QInsertOnTail(diskQueueIds[diskID], currentProcess());
+	unlock();
+	dispatch();
 
 	if(mmio.Field4 == ERR_BAD_PARAM) {
 		aprintf("ERROR: Invalid parameter for disk write.\n");
@@ -65,13 +79,6 @@ void writeToDisk(long diskID, long sector, char* writeBuffer) {
 		exit(0);
 	}
 
-	//TODO: add to disk queue.
-
-	//wait for disk to write.
-	//TODO: interact w/ a dispatcher while doing this.
-	while(getDiskStatus(diskID) == DEVICE_IN_USE) {
-		idle();
-	}
 }
 
 /**
@@ -90,7 +97,20 @@ void readFromDisk(long diskID, long sector, char* readBuffer) {
 	mmio.Field2 = sector;
 	mmio.Field3 = (long)readBuffer;
 
+	if(getDiskStatus(diskID) == DEVICE_IN_USE) {
+		lock();
+		QInsertOnTail(diskQueueIds[diskID], currentProcess());
+		unlock();
+		dispatch();
+	}
+
 	MEM_WRITE(Z502Disk, &mmio);
+
+	//we have to wait for the disk to finish before we continue.
+	lock();
+	QInsertOnTail(diskQueueIds[diskID], currentProcess());
+	unlock();
+	dispatch();
 
 	if(mmio.Field4 == ERR_BAD_PARAM) {
 		aprintf("ERROR: Invalid parameter for disk read.\n");
@@ -98,12 +118,6 @@ void readFromDisk(long diskID, long sector, char* readBuffer) {
 		aprintf("ERROR: Disk read attempted when disk is already in use.\n");
 	} else if(mmio.Field4 == ERR_NO_PREVIOUS_WRITE) {
 		aprintf("ERROR: Read from a sector that hasn't been written to.\n");
-	}
-
-	//wait to read from disk.
-	//TODO: interact w/ a dispatcher while doing this.
-	while(getDiskStatus(diskID) == DEVICE_IN_USE) {
-		idle();
 	}
 
 }

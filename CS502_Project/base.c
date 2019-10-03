@@ -139,9 +139,22 @@ void InterruptHandler(void) {
 
     		}
 
-    	} else if(DeviceID == DISK_INTERRUPT_DISK0 || DeviceID == DISK_INTERRUPT_DISK1) {
+    	} else if(DeviceID == DISK_INTERRUPT_DISK0 || DeviceID == DISK_INTERRUPT_DISK1 || DeviceID == 7
+    			|| DeviceID == 8 || DeviceID == 9 || DeviceID == 10 || DeviceID == 11 || DeviceID == 12) {
 
-    		interruptPrint("Disk interrupt\n");
+    		interruptPrint("Interrupt Handler: Disk interrupt found\n");
+    		int diskID = DeviceID - 5;
+
+    		lock();
+    		Process* proc = QRemoveHead(diskQueueIds[diskID]);
+    		unlock();
+
+    		//this could happen if a process
+    		//made a disk request and didn't have
+    		//to wait.
+    		if((int)proc != -1) {
+    			addToReadyQueue(proc);
+    		}
 
     		if(Status != ERR_SUCCESS) {
 
@@ -550,6 +563,11 @@ void osInit(int argc, char *argv[]) {
     } else if((argc > 1) && (strcmp(argv[1], "test10") == 0)) {
 
     	long address = (long)test10;
+    	pcbInit(address, (long)PageTable);
+
+    } else if((argc > 1) && (strcmp(argv[1], "test11") == 0)) {
+
+    	long address = (long)test11;
     	pcbInit(address, (long)PageTable);
 
     }

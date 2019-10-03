@@ -78,6 +78,8 @@ void dispatch() {
  */
 void schedulePrint() {
 
+	//TODO: show msg suspended and disk suspended processes.
+
 	SP_INPUT_DATA* spData = malloc(sizeof(SP_INPUT_DATA));
 	strcpy(spData->TargetAction, "Dispatch");
 
