@@ -187,6 +187,7 @@ long sendMessage(long targetPID, char* messageBuffer, long msgSendLength) {
 
 			QRemoveItem(msgSuspendQueueID, suspendedProc);
 			addToReadyQueue(suspendedProc);
+			suspendedProc = QNextItemInfo(msgSuspendQueueID);
 
 		}
 		unlock();
@@ -228,10 +229,10 @@ Message* findMessage(long sourcePid) {
 		//we can receive the message if:
 		//--it is to us, from the target.
 		//--the target is -1 and it is to us.
-		//--the target is -1 and it is a broadcast.
+		//--the target is -1 and it is a broadcast.(and we didn't make it)
 		if((msg->to == current->pid && msg->from == sourcePid)
 				|| (msg->to == current->pid && sourcePid == -1)
-				|| (sourcePid == -1 && msg->to == -1)) {
+				|| (sourcePid == -1 && msg->to == -1 && msg->from != current->pid)) {
 
 			return msg;
 
@@ -289,11 +290,16 @@ long receiveMessage(long sourcePID, char* receiveBuffer, long receiveLength, lon
 	}
 
 	int bufferLength = strlen(msg->messageContent) + 1;
-	receiveBuffer = malloc(bufferLength * sizeof(char));
 
 	strcpy(receiveBuffer, msg->messageContent);
 	*sendLength = bufferLength;
 	*senderPid = msg->from;
+
+	lock();
+	QRemoveItem(messageQueueID, msg);
+	--numMessages;
+	unlock();
+
 	return 0;
 
 }
