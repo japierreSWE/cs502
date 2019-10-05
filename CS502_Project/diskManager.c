@@ -22,21 +22,56 @@
  */
 void initDiskManager() {
 
-	diskQueueIds = (int *)calloc(MAX_NUMBER_OF_DISKS, sizeof(int));
+	diskQueueId = QCreate("diskQueue");
 
-	//get the queue id's for each disk
-	for(int i = 0; i<MAX_NUMBER_OF_DISKS; i++) {
+}
 
-		//give each disk queue a name of
-		//disk0, disk1, disk2, and so on
-		char* name = (char *)calloc(6, sizeof(char));
-		strcpy(name, "disk");
-		char number[2];
-		sprintf(number, "%d", i);
-		strcat(name, number);
-		diskQueueIds[i] = QCreate(name);
+/**
+ * This adds the currently running process to
+ * the disk queue, requesting the given diskID
+ * Parameters:
+ * diskID: the diskID requested by the currently running process.
+ */
+void addToDiskQueue(long diskID) {
+
+	DiskRequest* req = malloc(sizeof(DiskRequest));
+	req->diskID = diskID;
+	req->process = currentProcess();
+
+	lock();
+	QInsertOnTail(diskQueueId, req);
+	unlock();
+
+}
+
+/**
+ * Removes from the disk queue the first
+ * disk request that requested the given diskID.
+ * Parameters:
+ * diskID: the diskID that was requested
+ * Returns: the first process found that requested that diskID,
+ * or -1 if none found
+ */
+Process* removeFromDiskQueue(long diskID) {
+
+	int i = 0;
+	DiskRequest* req = QWalk(diskQueueId, i);
+
+	while((int)req != -1) {
+
+		if(req->diskID == diskID) {
+			lock();
+			QRemoveItem(diskQueueId, req);
+			unlock();
+			return req->process;
+		}
+
+		++i;
+		req = QWalk(diskQueueId, i);
 
 	}
+
+	return (Process*)-1;
 
 }
 
@@ -56,19 +91,15 @@ void writeToDisk(long diskID, long sector, char* writeBuffer) {
 	mmio.Field2 = sector;
 	mmio.Field3 = (long)writeBuffer;
 
-	if(getDiskStatus(diskID) == DEVICE_IN_USE) {
-		lock();
-		QInsertOnTail(diskQueueIds[diskID], currentProcess());
-		unlock();
+	while(getDiskStatus(diskID) == DEVICE_IN_USE) {
+		addToDiskQueue(diskID);
 		dispatch();
 	}
 
 	MEM_WRITE(Z502Disk, &mmio);
 
 	//we have to wait for the disk to finish before we continue.
-	lock();
-	QInsertOnTail(diskQueueIds[diskID], currentProcess());
-	unlock();
+	addToDiskQueue(diskID);
 	dispatch();
 
 	if(mmio.Field4 == ERR_BAD_PARAM) {
@@ -98,18 +129,14 @@ void readFromDisk(long diskID, long sector, char* readBuffer) {
 	mmio.Field3 = (long)readBuffer;
 
 	if(getDiskStatus(diskID) == DEVICE_IN_USE) {
-		lock();
-		QInsertOnTail(diskQueueIds[diskID], currentProcess());
-		unlock();
+		addToDiskQueue(diskID);
 		dispatch();
 	}
 
 	MEM_WRITE(Z502Disk, &mmio);
 
 	//we have to wait for the disk to finish before we continue.
-	lock();
-	QInsertOnTail(diskQueueIds[diskID], currentProcess());
-	unlock();
+	addToDiskQueue(diskID);
 	dispatch();
 
 	if(mmio.Field4 == ERR_BAD_PARAM) {

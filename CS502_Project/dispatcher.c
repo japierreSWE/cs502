@@ -14,6 +14,7 @@
 #include "dispatcher.h"
 #include "processManager.h"
 #include "moreGlobals.h"
+#include "diskManager.h"
 
 void schedulePrint();
 int inReadyQueue(long pid);
@@ -154,6 +155,34 @@ void schedulePrint() {
 
 		++i;
 		currSuspend = (Process*)QWalk(suspendQueueId, i);
+
+	}
+
+	i = 0;
+	Process* currMsg = (Process*)QWalk(msgSuspendQueueID, i);
+	spData->NumberOfMessageSuspendedProcesses = 0;
+
+	while((int)currMsg != -1) {
+
+		++spData->NumberOfMessageSuspendedProcesses;
+		spData->MessageSuspendedProcessPIDs[i] = (INT16)currMsg->pid;
+
+		++i;
+		currMsg = (Process*)QWalk(msgSuspendQueueID, i);
+
+	}
+
+	i = 0;
+	DiskRequest* currDisk = (DiskRequest*)QWalk(diskQueueId, i);
+	spData->NumberOfDiskSuspendedProcesses = 0;
+
+	while((int)currDisk != -1) {
+
+		++spData->NumberOfDiskSuspendedProcesses;
+		spData->DiskSuspendedProcessPIDs[i] = (INT16)currDisk->process->pid;
+
+		++i;
+		currDisk = (DiskRequest*)QWalk(diskQueueId, i);
 
 	}
 

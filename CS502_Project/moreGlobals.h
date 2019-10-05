@@ -56,6 +56,13 @@ struct Message {
 
 typedef struct Message Message;
 
+struct DiskRequest {
+	long diskID;
+	Process* process;
+};
+
+typedef struct DiskRequest DiskRequest;
+
 int timerQueueID;
 int processQueueID;
 int numProcesses; //the current number of processes.

@@ -146,15 +146,32 @@ void InterruptHandler(void) {
     		int diskID = DeviceID - 5;
 
     		lock();
-    		Process* proc = QRemoveHead(diskQueueIds[diskID]);
+    		Process* proc = removeFromDiskQueue(diskID);
     		unlock();
 
-    		//this could happen if a process
-    		//made a disk request and didn't have
-    		//to wait.
-    		if((int)proc != -1) {
-    			addToReadyQueue(proc);
+    		addToReadyQueue(proc);
+
+    		//wake up the rest of the processes that requested this disk.
+    		//some of them could be waiting because the disk was in use.
+    		int i = 0;
+    		DiskRequest* req = (DiskRequest*)QWalk(diskQueueId, i);
+
+    		while((int)req != -1) {
+
+    			if(req->diskID == diskID) {
+
+    				lock();
+    				QRemoveItem(diskQueueId, req);
+    				unlock();
+    				addToReadyQueue(req->process);
+
+    			}
+
+    			++i;
+    			req = (DiskRequest*)QWalk(diskQueueId, i);
+
     		}
+
 
     		if(Status != ERR_SUCCESS) {
 
@@ -573,6 +590,11 @@ void osInit(int argc, char *argv[]) {
     } else if((argc > 1) && (strcmp(argv[1], "test12") == 0)) {
 
     	long address = (long)test12;
+    	pcbInit(address, (long)PageTable);
+
+    } else if((argc > 1) && (strcmp(argv[1], "test13") == 0)) {
+
+    	long address = (long)test13;
     	pcbInit(address, (long)PageTable);
 
     }

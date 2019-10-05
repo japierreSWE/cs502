@@ -18,10 +18,9 @@
 #define                  DO_UNLOCK                   0
 #define                  SUSPEND_UNTIL_LOCKED        TRUE
 #define                  DO_NOT_SUSPEND              FALSE
-#define INTERRUPT_PRINTS_LIMIT 20
+#define INTERRUPT_PRINTS_LIMIT UINT_MAX
 
 int interruptPrints = 0;
-unsigned int timerQueueHead = UINT_MAX;
 
 Message* findMessage();
 
