@@ -38,9 +38,9 @@ void addToDiskQueue(long diskID) {
 	req->diskID = diskID;
 	req->process = currentProcess();
 
-	lock();
+	diskLock();
 	QInsertOnTail(diskQueueId, req);
-	unlock();
+	diskUnlock();
 
 }
 
@@ -54,15 +54,16 @@ void addToDiskQueue(long diskID) {
  */
 Process* removeFromDiskQueue(long diskID) {
 
+	diskLock();
 	int i = 0;
 	DiskRequest* req = QWalk(diskQueueId, i);
 
 	while((int)req != -1) {
 
 		if(req->diskID == diskID) {
-			lock();
+
 			QRemoveItem(diskQueueId, req);
-			unlock();
+			diskUnlock();
 			return req->process;
 		}
 
@@ -70,6 +71,7 @@ Process* removeFromDiskQueue(long diskID) {
 		req = QWalk(diskQueueId, i);
 
 	}
+	diskUnlock();
 
 	return (Process*)-1;
 

@@ -75,8 +75,20 @@ int numMessages; //number of messages in the queue.
 
 int interruptPrints;
 
-void lock();
-void unlock();
+void timerLock();
+void timerUnlock();
+void diskLock();
+void diskUnlock();
+void msgLock();
+void msgUnlock();
+void suspendLock();
+void suspendUnlock();
+void processLock();
+void processUnlock();
+void msgSuspendLock();
+void msgSuspendUnlock();
+void readyLock();
+void readyUnlock();
 long getTimeOfDay();
 void createTimerQueue();
 int addToTimerQueue(TimerRequest* request);

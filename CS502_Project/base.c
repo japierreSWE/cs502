@@ -87,9 +87,9 @@ void InterruptHandler(void) {
 
     	if(DeviceID == TIMER_INTERRUPT) {
     		interruptPrint("InterruptHandler: Timer interrupt found.\n");
-    		lock();
+    		timerLock();
     		TimerRequest* req = (TimerRequest*)QRemoveHead(timerQueueID);
-    		unlock();
+    		timerUnlock();
 
     		if((int)req == -1) {
     			return;
@@ -105,7 +105,9 @@ void InterruptHandler(void) {
     		//make its process ready.
     		addToReadyQueue(req->process);
 
+    		timerLock();
     		TimerRequest* next = (TimerRequest*)QNextItemInfo(timerQueueID);
+    		timerUnlock();
 
     		//we now manage the other requests in the queue.
     		//ones that have already ocurred go in the ready queue.
@@ -115,13 +117,13 @@ void InterruptHandler(void) {
     			//already occurred. put it in ready queue.
     			if(getTimeOfDay() >= next->sleepUntil) {
 
-    				lock();
+    				timerLock();
     				QRemoveHead(timerQueueID);
-    				unlock();
+    				timerUnlock();
 
-    				lock();
+    				readyLock();
     				addToReadyQueue(next->process);
-    				unlock();
+    				readyUnlock();
 
     				if(interruptPrints < INTERRUPT_PRINTS_LIMIT) {
 
@@ -129,7 +131,9 @@ void InterruptHandler(void) {
 
 					}
 
+    				timerLock();
     				next = (TimerRequest*)QNextItemInfo(timerQueueID);
+    				timerUnlock();
 
     			} else {
     				//means its sleepUntil is in the future.
@@ -162,14 +166,15 @@ void InterruptHandler(void) {
     		interruptPrint("Interrupt Handler: Disk interrupt found\n");
     		int diskID = DeviceID - 5;
 
-    		lock();
+    		diskLock();
     		Process* proc = removeFromDiskQueue(diskID);
-    		unlock();
+    		diskUnlock();
 
     		addToReadyQueue(proc);
 
     		//wake up the rest of the processes that requested this disk.
     		//some of them could be waiting because the disk was in use.
+    		diskLock();
     		int i = 0;
     		DiskRequest* req = (DiskRequest*)QWalk(diskQueueId, i);
 
@@ -177,9 +182,8 @@ void InterruptHandler(void) {
 
     			if(req->diskID == diskID) {
 
-    				lock();
+
     				QRemoveItem(diskQueueId, req);
-    				unlock();
     				addToReadyQueue(req->process);
     				i = -1;
     			}
@@ -188,6 +192,7 @@ void InterruptHandler(void) {
     			req = (DiskRequest*)QWalk(diskQueueId, i);
 
     		}
+    		diskUnlock();
 
 
     		if(Status != ERR_SUCCESS) {

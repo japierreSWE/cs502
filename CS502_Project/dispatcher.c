@@ -54,9 +54,9 @@ void dispatch() {
 
 	//if we reach here, there is a ready process.
 	//get next process off of queue and start it.
-	lock();
+	readyLock();
 	Process* nextProcess = QRemoveHead(readyQueueId);
-	unlock();
+	readyUnlock();
 
 	MEMORY_MAPPED_IO mmio;
 	mmio.Mode = Z502StartContext;
@@ -214,7 +214,9 @@ int readyQueueIsEmpty() {
  */
 void addToReadyQueue(Process* process) {
 	//QInsertOnTail(readyQueueId, &process);
+	readyLock();
 	QInsert(readyQueueId, process->priority, process);
+	readyUnlock();
 }
 
 /**
@@ -233,17 +235,17 @@ long terminateProcess(long pid) {
 		//shut down the current process.
 		//remove it from ready queue and process queue.
 		Process* current = currentProcess();
-		lock();
+		readyLock();
 		QRemoveItem(readyQueueId,current);
-		unlock();
+		readyUnlock();
 
-		lock();
+		processLock();
 		QRemoveItem(processQueueID,current);
-		unlock();
+		processUnlock();
 
-		lock();
+		processLock();
 		--numProcesses;
-		unlock();
+		processUnlock();
 
 		//if there are no remaining processes, shut down.
 		if(numProcesses == 0) {
@@ -270,9 +272,9 @@ long terminateProcess(long pid) {
 			return -1;
 		}
 
-		lock();
+		processLock();
 		int processResult = (int)QRemoveItem(processQueueID,process);
-		unlock();
+		processUnlock();
 
 		if((int)processResult == -1) {
 
@@ -280,17 +282,17 @@ long terminateProcess(long pid) {
 
 		} else {
 			//we successfully found it. remove it from all queues.
-			lock();
+			readyLock();
 			QRemoveItem(readyQueueId,process);
-			unlock();
+			readyUnlock();
 
-			lock();
+			timerLock();
 			QRemoveItem(timerQueueID, process);
-			unlock();
+			timerUnlock();
 
-			lock();
+			suspendLock();
 			QRemoveItem(suspendQueueId, process);
-			unlock();
+			suspendUnlock();
 
 			--numProcesses;
 			return 0;
@@ -311,6 +313,7 @@ long terminateProcess(long pid) {
  */
 int inReadyQueue(long pid) {
 
+	readyLock();
 	int i = 0;
 	Process* curr = QWalk(readyQueueId, i);
 
@@ -319,6 +322,7 @@ int inReadyQueue(long pid) {
 	while((int)curr != -1) {
 
 		if(curr->pid == pid) {
+			readyUnlock();
 			return 1;
 		}
 
@@ -326,6 +330,7 @@ int inReadyQueue(long pid) {
 		curr = QWalk(readyQueueId, i);
 
 	}
+	readyUnlock();
 
 	//we didn't find it. return false.
 	return 0;
@@ -392,6 +397,7 @@ long suspendProcess(long pid) {
 		return -1;
 	}
 
+	readyLock();
 	int i = 0;
 	Process* curr = (Process*)QWalk(readyQueueId, i);
 
@@ -400,15 +406,16 @@ long suspendProcess(long pid) {
 		++i;
 		curr = (Process*)QWalk(readyQueueId, i);
 	}
+	readyUnlock();
 
 	//remove from ready queue, then add to suspend queue.
-	lock();
+	readyLock();
 	QRemoveItem(readyQueueId,curr);
-	unlock();
+	readyUnlock();
 
-	lock();
+	suspendLock();
 	QInsertOnTail(suspendQueueId,curr);
-	unlock();
+	suspendUnlock();
 
 	return 0;
 
@@ -442,6 +449,7 @@ long resumeProcess(long pid) {
 		return -1;
 	}
 
+	suspendLock();
 	int i = 0;
 	Process* curr = (Process*)QWalk(suspendQueueId,i);
 
@@ -450,11 +458,12 @@ long resumeProcess(long pid) {
 		++i;
 		curr = (Process*)QWalk(suspendQueueId,i);
 	}
+	suspendUnlock();
 
 	//remove from suspend queue and add to ready queue.
-	lock();
+	suspendLock();
 	QRemoveItem(suspendQueueId, curr);
-	unlock();
+	suspendUnlock();
 
 	addToReadyQueue(curr);
 

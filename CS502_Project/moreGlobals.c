@@ -36,21 +36,163 @@ Message* findMessage();
  * It attempts to lock, suspending
  * until this thread holds the lock.
  * THIS IS TEMPORARY. Locks are needed for all queues.
- */
+
 void lock() {
 	INT32 lockResult;
 	READ_MODIFY(MEMORY_INTERLOCK_BASE,DO_LOCK,SUSPEND_UNTIL_LOCKED,&lockResult);
-}
+}*/
 
 /**
  * Performs a hardware interlock.
  * It attempts to unlock, suspending
  * until this thread holds the lock.
- */
+
 void unlock() {
 	INT32 lockResult;
 	READ_MODIFY(MEMORY_INTERLOCK_BASE,DO_UNLOCK,SUSPEND_UNTIL_LOCKED,&lockResult);
+}*/
+
+/**
+ * Performs a hardware interlock for timer queue.
+ * It attempts to lock, suspending
+ * until this thread holds the lock.
+ */
+void timerLock() {
+	INT32 lockResult;
+	READ_MODIFY(TIMER_LOCK,DO_LOCK,SUSPEND_UNTIL_LOCKED,&lockResult);
 }
+
+/**
+ * Performs a hardware interlock for timer queue.
+ * It attempts to unlock, suspending
+ * until this thread holds the lock.
+ */
+void timerUnlock() {
+	INT32 lockResult;
+	READ_MODIFY(TIMER_LOCK,DO_UNLOCK,SUSPEND_UNTIL_LOCKED,&lockResult);
+}
+
+/**
+ * Performs a hardware interlock for disk queue.
+ * It attempts to lock, suspending
+ * until this thread holds the lock.
+ */
+void diskLock() {
+	INT32 lockResult;
+	READ_MODIFY(DISK_LOCK,DO_LOCK,SUSPEND_UNTIL_LOCKED,&lockResult);
+}
+
+/**
+ * Performs a hardware interlock for disk queue.
+ * It attempts to unlock, suspending
+ * until this thread holds the lock.
+ */
+void diskUnlock() {
+	INT32 lockResult;
+	READ_MODIFY(DISK_LOCK,DO_UNLOCK,SUSPEND_UNTIL_LOCKED,&lockResult);
+}
+
+/**
+ * Performs a hardware interlock for message queue.
+ * It attempts to lock, suspending
+ * until this thread holds the lock.
+ */
+void msgLock() {
+	INT32 lockResult;
+	READ_MODIFY(MSG_LOCK,DO_LOCK,SUSPEND_UNTIL_LOCKED,&lockResult);
+}
+
+/**
+ * Performs a hardware interlock for message queue.
+ * It attempts to unlock, suspending
+ * until this thread holds the lock.
+ */
+void msgUnlock() {
+	INT32 lockResult;
+	READ_MODIFY(MSG_LOCK,DO_UNLOCK,SUSPEND_UNTIL_LOCKED,&lockResult);
+}
+
+/**
+ * Performs a hardware interlock for suspend queue.
+ * It attempts to lock, suspending
+ * until this thread holds the lock.
+ */
+void suspendLock() {
+	INT32 lockResult;
+	READ_MODIFY(SUSPEND_LOCK,DO_LOCK,SUSPEND_UNTIL_LOCKED,&lockResult);
+}
+
+/**
+ * Performs a hardware interlock for suspend queue.
+ * It attempts to unlock, suspending
+ * until this thread holds the lock.
+ */
+void suspendUnlock() {
+	INT32 lockResult;
+	READ_MODIFY(SUSPEND_LOCK,DO_UNLOCK,SUSPEND_UNTIL_LOCKED,&lockResult);
+}
+
+/**
+ * Performs a hardware interlock for process queue.
+ * It attempts to lock, suspending
+ * until this thread holds the lock.
+ */
+void processLock() {
+	INT32 lockResult;
+	READ_MODIFY(PROCESS_LOCK,DO_LOCK,SUSPEND_UNTIL_LOCKED,&lockResult);
+}
+
+/**
+ * Performs a hardware interlock for process queue.
+ * It attempts to unlock, suspending
+ * until this thread holds the lock.
+ */
+void processUnlock() {
+	INT32 lockResult;
+	READ_MODIFY(PROCESS_LOCK,DO_UNLOCK,SUSPEND_UNTIL_LOCKED,&lockResult);
+}
+
+/**
+ * Performs a hardware interlock for message suspend queue.
+ * It attempts to lock, suspending
+ * until this thread holds the lock.
+ */
+void msgSuspendLock() {
+	INT32 lockResult;
+	READ_MODIFY(MSG_SUSPEND_LOCK,DO_LOCK,SUSPEND_UNTIL_LOCKED,&lockResult);
+}
+
+/**
+ * Performs a hardware interlock for message suspend queue.
+ * It attempts to unlock, suspending
+ * until this thread holds the lock.
+ */
+void msgSuspendUnlock() {
+	INT32 lockResult;
+	READ_MODIFY(MSG_SUSPEND_LOCK,DO_UNLOCK,SUSPEND_UNTIL_LOCKED,&lockResult);
+}
+
+/**
+ * Performs a hardware interlock for ready queue.
+ * It attempts to lock, suspending
+ * until this thread holds the lock.
+ */
+void readyLock() {
+	INT32 lockResult;
+	READ_MODIFY(READY_LOCK,DO_LOCK,SUSPEND_UNTIL_LOCKED,&lockResult);
+}
+
+/**
+ * Performs a hardware interlock for ready queue.
+ * It attempts to unlock, suspending
+ * until this thread holds the lock.
+ */
+void readyUnlock() {
+	INT32 lockResult;
+	READ_MODIFY(READY_LOCK,DO_UNLOCK,SUSPEND_UNTIL_LOCKED,&lockResult);
+}
+
+
 
 /**
  * Retrieves the hardware time and
@@ -87,11 +229,13 @@ int addToTimerQueue(TimerRequest* request) {
 	long sleepUntil = request->sleepUntil;
 
 	//get the head before we insert.
+	timerLock();
 	TimerRequest* head = (TimerRequest*)QNextItemInfo(timerQueueID);
+	timerUnlock();
 
-	lock();
+	timerLock();
 	QInsert(timerQueueID, sleepUntil, request);
-	unlock();
+	timerUnlock();
 
 
 	if((int)head != -1) {
@@ -180,15 +324,15 @@ long sendMessage(long targetPID, char* messageBuffer, long msgSendLength) {
 	msg->messageContent = malloc(sizeof(char) * msgSendLength);
 	strcpy(msg->messageContent, messageBuffer);
 
-	lock();
+	msgLock();
 	QInsertOnTail(messageQueueID, msg);
-	unlock();
+	msgUnlock();
 
 	//if this is a broadcast, wake up all processes.
 	//otherwise, only wake up the one we sent it to.
 	if(targetPID == -1) {
 
-		lock();
+		msgSuspendLock();
 		Process* suspendedProc = QNextItemInfo(msgSuspendQueueID);
 		while((int)suspendedProc != -1) {
 
@@ -197,18 +341,18 @@ long sendMessage(long targetPID, char* messageBuffer, long msgSendLength) {
 			suspendedProc = QNextItemInfo(msgSuspendQueueID);
 
 		}
-		unlock();
+		msgSuspendUnlock();
 
 	} else {
 
-		lock();
+		msgSuspendLock();
 		if((int)QItemExists(msgSuspendQueueID, target) != -1) {
 
 			QRemoveItem(msgSuspendQueueID, target);
 			addToReadyQueue(target);
 
 		}
-		unlock();
+		msgSuspendUnlock();
 
 	}
 	++numMessages;
@@ -228,6 +372,7 @@ Message* findMessage(long sourcePid) {
 
 	Process* current = currentProcess();
 
+	msgLock();
 	int i = 0;
 	Message* msg = QWalk(messageQueueID, i);
 
@@ -241,6 +386,7 @@ Message* findMessage(long sourcePid) {
 				|| (msg->to == current->pid && sourcePid == -1)
 				|| (sourcePid == -1 && msg->to == -1 && msg->from != current->pid)) {
 
+			msgUnlock();
 			return msg;
 
 		}
@@ -248,6 +394,7 @@ Message* findMessage(long sourcePid) {
 		++i;
 		msg = QWalk(messageQueueID, i);
 	}
+	msgUnlock();
 
 	return (Message*)-1;
 
@@ -281,9 +428,9 @@ long receiveMessage(long sourcePID, char* receiveBuffer, long receiveLength, lon
 
 		//this should be on the msg suspend queue if we have no message.
 		Process* current = currentProcess();
-		lock();
+		msgSuspendLock();
 		QInsertOnTail(msgSuspendQueueID, current);
-		unlock();
+		msgSuspendUnlock();
 
 		dispatch();
 		msg = findMessage(sourcePID);
@@ -302,10 +449,10 @@ long receiveMessage(long sourcePID, char* receiveBuffer, long receiveLength, lon
 	*sendLength = msg->messageLength;
 	*senderPid = msg->from;
 
-	lock();
+	msgLock();
 	QRemoveItem(messageQueueID, msg);
 	--numMessages;
-	unlock();
+	msgUnlock();
 
 	return 0;
 

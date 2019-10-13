@@ -130,12 +130,13 @@ long getPid(char* name) {
 		return current->pid;
 	}
 
-
+	processLock();
 	int i = 0;
 	Process* proc = (Process *)QWalk(processQueueID,i);
 	do {
 
 		if(strcmp(name, proc->name) == 0) {
+			processUnlock();
 			return proc->pid;
 		}
 
@@ -143,6 +144,7 @@ long getPid(char* name) {
 		proc = (Process *)QWalk(processQueueID,i);
 
 	} while((int)proc != -1);
+	processUnlock();
 
 	//we didn't find the process. return error message.
 	return -1;
@@ -158,6 +160,7 @@ long getPid(char* name) {
  */
 Process* getProcess(long pid) {
 
+	processLock();
 	int i = 0;
 	Process* proc = (Process *)QWalk(processQueueID,i);
 
@@ -165,6 +168,7 @@ Process* getProcess(long pid) {
 	do {
 
 		if(pid == proc->pid) {
+			processUnlock();
 			return proc;
 		}
 
@@ -172,6 +176,7 @@ Process* getProcess(long pid) {
 		proc = (Process *)QWalk(processQueueID,i);
 
 	} while((int)proc != -1);
+	processUnlock();
 
 	//process wasn't found. return -1;
 	return (Process*)-1;
@@ -244,6 +249,7 @@ Process* currentProcess() {
 		}
 
 	}*/
+	processLock();
 	int i =0;
 	Process* proc;
 	do {
@@ -253,12 +259,14 @@ Process* currentProcess() {
 		if((int)proc == -1) break;
 
 		if(proc->contextId == contextId) {
+			processUnlock();
 			return proc;
 		}
 
 		++i;
 
 	} while((int)proc != -1);
+	processUnlock();
 
 	return (Process*)-1;
 
@@ -276,9 +284,9 @@ void storeProcess(Process* process) {
 	++currPidNumber;
 	++numProcesses;
 
-	lock();
+	processLock();
 	QInsertOnTail(processQueueID,process);
-	unlock();
+	processUnlock();
 }
 
 /**
@@ -369,17 +377,20 @@ long changePriority(long pid, long newPriority) {
 
 	process->priority = newPriority;
 
+	readyLock();
 	//the process must go to a new position in the ready queue
 	//since it has a new priority.
 	if((int)QItemExists(readyQueueId,process) != -1) {
 
-		lock();
+
 		QRemoveItem(readyQueueId,process);
-		unlock();
+
 
 		addToReadyQueue(process);
 
 	}
+	readyUnlock();
+
 	return 0;
 }
 
