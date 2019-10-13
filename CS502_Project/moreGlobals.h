@@ -13,7 +13,7 @@
 #ifndef MOREGLOBALS_H_
 #define MOREGLOBALS_H_
 
-#define INTERRUPT_PRINTS_LIMIT UINT_MAX
+#define INTERRUPT_PRINTS_LIMIT 15
 
 //Struct for a process.
 //pid: the process ID.
