@@ -20,6 +20,8 @@ void schedulePrint();
 int inReadyQueue(long pid);
 int inSuspendQueue(long pid);
 
+int numSchedulePrints = 0;
+
 /**
  * Sets up the ready queue for use.
  */
@@ -76,15 +78,19 @@ void dispatch() {
 /**
  * Conducts a call to the scheduler printing
  * mechanism.
+ * Notes: if we've come from a terminated process,
+ * the currently running PID is shown as -1.
  */
 void schedulePrint() {
 
-	//TODO: show msg suspended and disk suspended processes.
+	if(numSchedulePrints >= 50) {
+		return;
+	}
 
 	SP_INPUT_DATA* spData = malloc(sizeof(SP_INPUT_DATA));
 	strcpy(spData->TargetAction, "Dispatch");
 
-	if(currentProcess()->contextId != -1) {
+	if((int)currentProcess() != -1) {
 		spData->CurrentlyRunningPID = (INT16)(currentProcess()->pid);
 	} else {
 		//this means that the PID doesn't exist.
@@ -191,7 +197,7 @@ void schedulePrint() {
 
 	//prevent memory leak.
 	free(spData);
-
+	++numSchedulePrints;
 }
 
 /**

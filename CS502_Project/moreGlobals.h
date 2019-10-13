@@ -13,6 +13,8 @@
 #ifndef MOREGLOBALS_H_
 #define MOREGLOBALS_H_
 
+#define INTERRUPT_PRINTS_LIMIT UINT_MAX
+
 //Struct for a process.
 //pid: the process ID.
 //priority: the process's current priority.
@@ -70,6 +72,8 @@ int messageQueueID; //queue containing messages.
 int msgSuspendQueueID; //queue containing processes waiting for a message.
 
 int numMessages; //number of messages in the queue.
+
+int interruptPrints;
 
 void lock();
 void unlock();

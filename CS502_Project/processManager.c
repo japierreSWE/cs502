@@ -28,11 +28,13 @@ long currPidNumber = 1;
 /**
  * This does all initial work needed for starting
  * the first process. This includes creating the first process,
- * creating the timer queue, and allocating data for
+ * creating the timer queue, creating other queues,
+ * and allocating data for
  * possible other processes.
  */
 void pcbInit(long address, long pageTable) {
 
+	interruptPrints = 0;
 	numProcesses = 0;
 	processes = (Process *)calloc(MAX_PROCESSES, sizeof(Process));
 	processQueueID = QCreate("processQ");
@@ -219,8 +221,7 @@ void startTimer(long timeAmount) {
 
 /**
  * Returns the process struct of the currently
- * running process. Returns a process
- * with a contextId of -1 if none is found.
+ * running process. Returns -1 if not found.
  */
 Process* currentProcess() {
 
@@ -259,9 +260,7 @@ Process* currentProcess() {
 
 	} while((int)proc != -1);
 
-	Process* errProc = (Process*)malloc(sizeof(Process));
-	errProc->contextId = -1;
-	return errProc;
+	return (Process*)-1;
 
 }
 

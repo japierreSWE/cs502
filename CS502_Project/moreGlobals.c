@@ -18,16 +18,24 @@
 #define                  DO_UNLOCK                   0
 #define                  SUSPEND_UNTIL_LOCKED        TRUE
 #define                  DO_NOT_SUSPEND              FALSE
-#define INTERRUPT_PRINTS_LIMIT UINT_MAX
+#define					 TIMER_LOCK 				 MEMORY_INTERLOCK_BASE
+#define					 DISK_LOCK  				 MEMORY_INTERLOCK_BASE+1
+#define					 MSG_LOCK   				 MEMORY_INTERLOCK_BASE+2
+#define					 SUSPEND_LOCK 				 MEMORY_INTERLOCK_BASE+3
+#define					 READY_LOCK 				 MEMORY_INTERLOCK_BASE+4
+#define					 PROCESS_LOCK 				 MEMORY_INTERLOCK_BASE+5
+#define					 MSG_SUSPEND_LOCK 			 MEMORY_INTERLOCK_BASE+6
 
-int interruptPrints = 0;
 
 Message* findMessage();
+
+//TODO: make locks for each queue.
 
 /**
  * Performs a hardware interlock.
  * It attempts to lock, suspending
  * until this thread holds the lock.
+ * THIS IS TEMPORARY. Locks are needed for all queues.
  */
 void lock() {
 	INT32 lockResult;
@@ -288,10 +296,10 @@ long receiveMessage(long sourcePID, char* receiveBuffer, long receiveLength, lon
 
 	}
 
-	int bufferLength = strlen(msg->messageContent) + 1;
+	//int bufferLength = strlen(msg->messageContent) + 1;
 
 	strcpy(receiveBuffer, msg->messageContent);
-	*sendLength = bufferLength;
+	*sendLength = msg->messageLength;
 	*senderPid = msg->from;
 
 	lock();

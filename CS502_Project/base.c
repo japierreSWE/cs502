@@ -31,6 +31,7 @@
 #include             "string.h"
 #include             <stdlib.h>
 #include             <ctype.h>
+#include             <limits.h>
 #include			 "diskManager.h"
 #include			 "dispatcher.h"
 #include			 "processManager.h"
@@ -90,6 +91,16 @@ void InterruptHandler(void) {
     		TimerRequest* req = (TimerRequest*)QRemoveHead(timerQueueID);
     		unlock();
 
+    		if((int)req == -1) {
+    			return;
+    		}
+
+    		if(interruptPrints < INTERRUPT_PRINTS_LIMIT) {
+
+    			aprintf("InterruptHandler: Process gotten from timer queue, PID %d\n", req->process->pid);
+
+    		}
+
     		//this timer request has been fulfilled.
     		//make its process ready.
     		addToReadyQueue(req->process);
@@ -111,6 +122,12 @@ void InterruptHandler(void) {
     				lock();
     				addToReadyQueue(next->process);
     				unlock();
+
+    				if(interruptPrints < INTERRUPT_PRINTS_LIMIT) {
+
+						aprintf("InterruptHandler: Process gotten from timer queue, PID %d\n", next->process->pid);
+
+					}
 
     				next = (TimerRequest*)QNextItemInfo(timerQueueID);
 
@@ -164,7 +181,7 @@ void InterruptHandler(void) {
     				QRemoveItem(diskQueueId, req);
     				unlock();
     				addToReadyQueue(req->process);
-
+    				i = -1;
     			}
 
     			++i;
@@ -513,6 +530,13 @@ void osInit(int argc, char *argv[]) {
     //     all of the other tests.
 
     if ((argc > 1) && (strcmp(argv[1], "sample") == 0)) {
+
+    	long address = (long)SampleCode;
+    	pcbInit(address, (long)PageTable);
+
+    	//need to do pcb init to get all things set up
+    	//for 1st process. above is code to do that.
+
         mmio.Mode = Z502InitializeContext;
         mmio.Field1 = 0;
         mmio.Field2 = (long) SampleCode;
@@ -611,6 +635,12 @@ void osInit(int argc, char *argv[]) {
     //  Creation and Switching of contexts should be done in a separate routine.
     //  This should be done by a "OsMakeProcess" routine, so that
     //  test0 runs on a process recognized by the operating system.
+
+    long address = (long)test0;
+    pcbInit(address, (long)PageTable);
+
+    //below is old code. above is how test0 would be run
+    //with my code.
 
     mmio.Mode = Z502InitializeContext;
     mmio.Field1 = 0;
