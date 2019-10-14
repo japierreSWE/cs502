@@ -29,29 +29,6 @@
 
 Message* findMessage();
 
-//TODO: make locks for each queue.
-
-/**
- * Performs a hardware interlock.
- * It attempts to lock, suspending
- * until this thread holds the lock.
- * THIS IS TEMPORARY. Locks are needed for all queues.
-
-void lock() {
-	INT32 lockResult;
-	READ_MODIFY(MEMORY_INTERLOCK_BASE,DO_LOCK,SUSPEND_UNTIL_LOCKED,&lockResult);
-}*/
-
-/**
- * Performs a hardware interlock.
- * It attempts to unlock, suspending
- * until this thread holds the lock.
-
-void unlock() {
-	INT32 lockResult;
-	READ_MODIFY(MEMORY_INTERLOCK_BASE,DO_UNLOCK,SUSPEND_UNTIL_LOCKED,&lockResult);
-}*/
-
 /**
  * Performs a hardware interlock for timer queue.
  * It attempts to lock, suspending
@@ -241,7 +218,7 @@ int addToTimerQueue(TimerRequest* request) {
 	if((int)head != -1) {
 
 		//if our sleep time ends before
-		//the head's...
+		//the head's, we should restart.
 		if(head->sleepUntil > sleepUntil) {
 
 			return 0;
@@ -424,6 +401,7 @@ long receiveMessage(long sourcePID, char* receiveBuffer, long receiveLength, lon
 		return -1;
 	}
 
+	//keep looking for the message until it's received.
 	while((int)msg == -1) {
 
 		//this should be on the msg suspend queue if we have no message.
@@ -437,6 +415,7 @@ long receiveMessage(long sourcePID, char* receiveBuffer, long receiveLength, lon
 
 	}
 
+	//must have right buffer size.
 	if(receiveLength < strlen(msg->messageContent) + 1) {
 
 		return -1;

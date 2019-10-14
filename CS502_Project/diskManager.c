@@ -17,8 +17,7 @@
 #include "dispatcher.h"
 
 /**
- * Initializes the disk manager by preparing the queues
- * for each disk.
+ * Initializes the disk manager by creating the disk queue.
  */
 void initDiskManager() {
 
@@ -58,6 +57,9 @@ Process* removeFromDiskQueue(long diskID) {
 	int i = 0;
 	DiskRequest* req = QWalk(diskQueueId, i);
 
+	//iterate through disk queue
+	//until we find a request for diskID.
+	//remove, then return it.
 	while((int)req != -1) {
 
 		if(req->diskID == diskID) {
@@ -93,6 +95,7 @@ void writeToDisk(long diskID, long sector, char* writeBuffer) {
 	mmio.Field2 = sector;
 	mmio.Field3 = (long)writeBuffer;
 
+	//if the disk is being used, wait.
 	while(getDiskStatus(diskID) == DEVICE_IN_USE) {
 		addToDiskQueue(diskID);
 		dispatch();
@@ -130,6 +133,7 @@ void readFromDisk(long diskID, long sector, char* readBuffer) {
 	mmio.Field2 = sector;
 	mmio.Field3 = (long)readBuffer;
 
+	//if the disk is being used, wait.
 	if(getDiskStatus(diskID) == DEVICE_IN_USE) {
 		addToDiskQueue(diskID);
 		dispatch();

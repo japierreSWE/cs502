@@ -4,7 +4,7 @@
  *  Created on: Sep 2, 2019
  *      Author: jean-philippe
  */
-
+//intended to contain routines involving dispatching and process state.
 #ifndef DISPATCHER_H_
 #define DISPATCHER_H_
 

@@ -4,6 +4,7 @@
  *  Created on: Aug 29, 2019
  *      Author: jean-philippe
  */
+//intended to contain disk management operations.
 
 #ifndef DISKMANAGER_H_
 #define DISKMANAGER_H_

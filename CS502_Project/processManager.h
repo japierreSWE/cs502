@@ -4,7 +4,7 @@
  *  Created on: Aug 24, 2019
  *      Author: jean-philippe
  */
-
+//intended to contain routines that manage processes.
 #ifndef PROCESSMANAGER_H_
 #define PROCESSMANAGER_H_
 

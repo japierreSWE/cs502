@@ -159,7 +159,7 @@ void InterruptHandler(void) {
     			}
 
     		}
-
+    	//manages disk interrupts
     	} else if(DeviceID == DISK_INTERRUPT_DISK0 || DeviceID == DISK_INTERRUPT_DISK1 || DeviceID == 7
     			|| DeviceID == 8 || DeviceID == 9 || DeviceID == 10 || DeviceID == 11 || DeviceID == 12) {
 

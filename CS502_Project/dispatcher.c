@@ -164,6 +164,7 @@ void schedulePrint() {
 
 	}
 
+	//count msg suspended process, store their pids.
 	i = 0;
 	Process* currMsg = (Process*)QWalk(msgSuspendQueueID, i);
 	spData->NumberOfMessageSuspendedProcesses = 0;
@@ -178,6 +179,7 @@ void schedulePrint() {
 
 	}
 
+	//count disk suspended processes, store their pids.
 	i = 0;
 	DiskRequest* currDisk = (DiskRequest*)QWalk(diskQueueId, i);
 	spData->NumberOfDiskSuspendedProcesses = 0;

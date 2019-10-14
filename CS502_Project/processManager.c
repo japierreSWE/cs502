@@ -55,8 +55,11 @@ void pcbInit(long address, long pageTable) {
 }
 
 /**
- * This method facilitates the creation of the currently
+ * This method facilitates the creation of the first
  * running process. It stores the process in memory.
+ * Parameters:
+ * address: the address the process starts at.
+ * pageTable: the process's page table.
  */
 void createInitialProcess(long address, long pageTable) {
 
@@ -230,7 +233,7 @@ void startTimer(long timeAmount) {
  */
 Process* currentProcess() {
 
-	//first, we get
+	//first, we get the current context id.
 	MEMORY_MAPPED_IO mmio;
 	mmio.Mode = Z502GetCurrentContext;
 	mmio.Field1 = 0;
@@ -241,14 +244,8 @@ Process* currentProcess() {
 	MEM_WRITE(Z502Context, &mmio);
 	long contextId = mmio.Field1;
 
-	//find the process with this context.
-	/*for(int i = 0; i<numProcesses; i++) {
-
-		if(processes[i].contextId == contextId) {
-			return processes[i];
-		}
-
-	}*/
+	//find the process with this context by iterating through
+	//process queue.
 	processLock();
 	int i =0;
 	Process* proc;
@@ -359,6 +356,8 @@ long createProcess(char* processName, void* startingAddress, long initialPriorit
  */
 long changePriority(long pid, long newPriority) {
 
+	//case for changing this process's
+	//priority.
 	if(pid == -1) {
 
 		if(newPriority < 0) return -1;
