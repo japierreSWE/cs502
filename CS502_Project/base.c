@@ -36,6 +36,7 @@
 #include			 "dispatcher.h"
 #include			 "processManager.h"
 #include 			 "moreGlobals.h"
+#include			 "fileSystem.h"
 
 
 //  This is a mapping of system call nmemonics with definitions
@@ -466,6 +467,23 @@ void svc(SYSTEM_CALL_DATA *SystemCallData) {
 				*errorReturned = result;
 			}
 
+    		break;
+    	}
+
+    	case SYSNUM_FORMAT: {
+
+    		long diskID = (long)SystemCallData->Argument[0];
+    		long* errorReturned = (long*)SystemCallData->Argument[1];
+
+    		long result = formatDisk(diskID);
+
+    		if(result == 0) {
+				*errorReturned = ERR_SUCCESS;
+			} else {
+				*errorReturned = result;
+			}
+
+    		break;
     	}
 
     }
@@ -629,6 +647,11 @@ void osInit(int argc, char *argv[]) {
     } else if((argc > 1) && (strcmp(argv[1], "test14") == 0)) {
 
     	long address = (long)test14;
+    	pcbInit(address, (long)PageTable);
+
+    } else if((argc > 1) && (strcmp(argv[1], "test21") == 0)) {
+
+    	long address = (long)test21;
     	pcbInit(address, (long)PageTable);
 
     }

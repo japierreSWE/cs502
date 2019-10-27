@@ -83,7 +83,7 @@ void dispatch() {
  */
 void schedulePrint() {
 
-	if(numSchedulePrints >= 50) {
+	if(numSchedulePrints >= schedulePrintLimit) {
 		return;
 	}
 

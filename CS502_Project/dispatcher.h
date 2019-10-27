@@ -12,6 +12,7 @@
 
 int readyQueueId;
 int suspendQueueId;
+int schedulePrintLimit;
 
 void initReadyQueue();
 void initSuspendQueue();

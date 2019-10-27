@@ -36,6 +36,7 @@ void pcbInit(long address, long pageTable) {
 
 	interruptPrints = 0;
 	numProcesses = 0;
+	schedulePrintLimit = 50;
 	processes = (Process *)calloc(MAX_PROCESSES, sizeof(Process));
 	processQueueID = QCreate("processQ");
 	createTimerQueue();
@@ -43,6 +44,11 @@ void pcbInit(long address, long pageTable) {
 	if(timerQueueID == -1) {
 		aprintf("Couldn't create timerQueue\n");
 		exit(0);
+	}
+
+	//to ensure all output for this test.
+	if(address == (long)test7) {
+		schedulePrintLimit = 100;
 	}
 
 	initDiskManager();
