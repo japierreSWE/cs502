@@ -97,6 +97,7 @@ void createInitialProcess(long address, long pageTable) {
 	}
 
 	process->contextId = mmio.Field1;
+	process->currentDirectorySector = -1;
 
 	storeProcess(process);
 

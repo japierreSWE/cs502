@@ -22,6 +22,8 @@
 //startingAddress: the address the process begins execution at.
 //pageTable: the process's page table.
 //contextId: the process's contextId
+//currentDirectorySector: the sector of the disk containing the current directory.
+//currentDisk: the diskID containing the current directory
 struct Process {
 	long pid;
 	long priority;
@@ -29,6 +31,8 @@ struct Process {
 	long startingAddress;
 	long pageTable;
 	long contextId;
+	int currentDirectorySector;
+	long currentDisk;
 };
 
 typedef struct Process Process;

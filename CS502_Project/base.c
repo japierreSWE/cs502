@@ -486,6 +486,23 @@ void svc(SYSTEM_CALL_DATA *SystemCallData) {
     		break;
     	}
 
+    	case SYSNUM_OPEN_DIR: {
+
+    		long diskID = (long)SystemCallData->Argument[0];
+    		char* dirName = (char*)SystemCallData->Argument[1];
+    		long* errorReturned = (long*)SystemCallData->Argument[2];
+
+    		long result = openDir(diskID, dirName);
+
+    		if(result == 0) {
+    			*errorReturned = ERR_SUCCESS;
+    		} else {
+    			*errorReturned = result;
+    		}
+
+    		break;
+    	}
+
     }
 
 }                                               // End of svc

@@ -12,6 +12,10 @@
 #include "diskManager.h"
 #include <stdlib.h>
 
+int rootSector = 0x11;
+int bitmapSector = 0x01;
+int bitmapSize; //# of sectors the bitmap takes up.
+
 /**
  * Formats a disk for it to be used
  * for file management.
@@ -25,6 +29,8 @@ int formatDisk(int diskID) {
 	if(diskID < 0 || diskID >= MAX_NUMBER_OF_DISKS) {
 		return -1;
 	}
+
+	currentProcess()->currentDisk = diskID;
 
 	char* sectorZeroBuffer = malloc(PGSIZE * sizeof(char));
 
@@ -46,6 +52,9 @@ int formatDisk(int diskID) {
 
 	//put in bitmap size.
 	sectorZeroBuffer[4] = 0x04;
+
+	//initialize bitmap size.
+	bitmapSize = 4*sectorZeroBuffer[4];
 
 	//put in swap size.
 	sectorZeroBuffer[5] = 0x80;
@@ -84,7 +93,7 @@ int formatDisk(int diskID) {
 		tempBuffer[i] = 0x00;
 	}
 
-	writeToDisk(diskID, 0x01, tempBuffer);
+	writeToDisk(diskID, bitmapSector, tempBuffer);
 
 
 	//now we make the buffer contain root's header
@@ -122,7 +131,7 @@ int formatDisk(int diskID) {
 	tempBuffer[15] = 0x00;
 	tempBuffer[14] = 0x00;
 
-	writeToDisk(diskID, 0x11, tempBuffer);
+	writeToDisk(diskID, rootSector, tempBuffer);
 
 
 	//now we make the index sector.
@@ -144,6 +153,72 @@ int formatDisk(int diskID) {
 	tempBuffer[15] = 0x00;
 
 	writeToDisk(diskID, 0x12, tempBuffer);
+
+	//we don't need these anymore
+	free(tempBuffer);
+	free(sectorZeroBuffer);
+
+	return 0;
+
+}
+
+/*
+ * Finds the first open sector available
+ * by looking for a 0 bit in the bitmap.
+ * Returns the index of that bit, ie. the
+ * sector to use.
+ * Returns -1 if there are no available sectors.
+ */
+long findOpenSector() {
+
+	int index = 0;
+	char* tempBuffer = malloc(PGSIZE * sizeof(char));
+	int foundAvailable = 0;
+
+	for(int i = bitmapSector; i<bitmapSector+bitmapSize; i++) {
+
+		readFromDisk(currentProcess()->currentDisk, i, tempBuffer);
+
+		for(int j = 0; j<PGSIZE; j++) {
+
+			for(int k = 0; k<4; k++) {
+
+				int masked = tempBuffer[j] & (1 << k);
+
+				if(masked >> k == 1) {
+					return index;
+				}
+
+				++index;
+
+			}
+
+		}
+
+	}
+
+	return -1;
+
+}
+
+/**
+ * Opens a directory, making it the current directory.
+ * Parameters:
+ * diskID: the diskID to open the directory in.
+ * if -1, find the directory in the current directory.
+ */
+int openDir(int diskID, char* directoryName) {
+
+	if(diskID < 0 || diskID >= MAX_NUMBER_OF_DISKS) {
+		return -1;
+	}
+
+	//if this is our first dir, basically.
+	if(currentProcess()->currentDirectorySector == -1 && strcmp(directoryName,"root") == 0) {
+
+		currentProcess()->currentDirectorySector = rootSector;
+
+	}
 
 	return 0;
 

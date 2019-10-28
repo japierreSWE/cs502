@@ -12,5 +12,6 @@
 #define FILESYSTEM_H_
 
 int formatDisk(int diskID);
+int openDir(int diskID, char* directoryName);
 
 #endif /* FILESYSTEM_H_ */
