@@ -15,6 +15,7 @@
 int rootSector = 0x11;
 int bitmapSector = 0x01;
 int bitmapSize; //# of sectors the bitmap takes up.
+int currentInode = 0x01; //the next inode we'll use for a file.
 
 /**
  * Formats a disk for it to be used
@@ -164,28 +165,40 @@ int formatDisk(int diskID) {
 
 /*
  * Finds the first open sector available
- * by looking for a 0 bit in the bitmap.
+ * in the bitmap by looking for a 0 bit
  * Returns the index of that bit, ie. the
  * sector to use.
  * Returns -1 if there are no available sectors.
  */
 long findOpenSector() {
 
-	int index = 0;
+	long index = 0;
 	char* tempBuffer = malloc(PGSIZE * sizeof(char));
 	int foundAvailable = 0;
 
 	for(int i = bitmapSector; i<bitmapSector+bitmapSize; i++) {
 
-		readFromDisk(currentProcess()->currentDisk, i, tempBuffer);
+		int result = readFromDisk(currentProcess()->currentDisk, i, tempBuffer);
+
+		//if we haven't written to this part of the bitmap.
+		if(result == -2) {
+			return index;
+		}
 
 		for(int j = 0; j<PGSIZE; j++) {
 
 			for(int k = 0; k<4; k++) {
 
-				int masked = tempBuffer[j] & (1 << k);
+				int shiftAmount = (3 - k); //starts at 3, goes to 0
+				int masked = tempBuffer[j] & (1 << shiftAmount);
 
-				if(masked >> k == 1) {
+				//if we find a zero bit.
+				if(masked >> shiftAmount != 1) {
+
+					//flip the bit, then write.
+					tempBuffer[j] = tempBuffer[j] | (1 << shiftAmount);
+					writeToDisk(currentProcess()->currentDisk, i, tempBuffer);
+					free(tempBuffer);
 					return index;
 				}
 
@@ -196,8 +209,83 @@ long findOpenSector() {
 		}
 
 	}
-
+	free(tempBuffer);
 	return -1;
+
+}
+
+/**
+ * Finds an index that hasn't been written
+ * to yet in the current directory. If there
+ * is none in the current index level, it checks
+ * if there is an index level after that. If there is
+ * none, it creates a new index level and updates the directory
+ * accordingly. Otherwise, it checks the next index level.
+ * Returns an unwritten index or -1 if there isn't enough space.
+ */
+int findUnwrittenIndex() {
+
+	char* tempBuffer = malloc(PGSIZE * sizeof(char));
+	char* dirBuffer = malloc(PGSIZE * sizeof(char));
+	int sectorNumber;
+
+	readFromDisk(currentProcess()->currentDisk, currentProcess()->currentDirectorySector, tempBuffer);
+
+	int indexMsb = tempBuffer[13];
+	int indexLsb = tempBuffer[12];
+
+	int indexSector = (indexMsb << 8) + indexLsb;
+
+	for(int i = 0; i<PGSIZE; i=i+2) {
+
+		int msb = tempBuffer[i+1];
+		int lsb = tempBuffer[i];
+
+		//shift msb so that it can be combined w/ lsb.
+		sectorNumber = (msb << 8) + lsb;
+
+		//looking for an index not already written to.
+		if(readFromDisk(currentProcess()->currentDisk, sectorNumber, dirBuffer) == -2) {
+
+			free(tempBuffer);
+			free(dirBuffer);
+			return indexSector;
+
+		}
+
+	}
+
+	//TODO: make a new index level if the first 7 are written to.
+
+}
+
+/**
+ * Places the name of a file in a file header.
+ * Parameters:
+ * fileName: a file name < 8 characters long.
+ * buffer: a character array to be used as a file header.
+ */
+void insertName(char* fileName, char* buffer) {
+
+	int nameCursor = 1;
+
+	for(int i = 0; i<7; i++) {
+
+		if(fileName[i] == '\0') {
+			break;
+		} else {
+
+			buffer[nameCursor] = fileName[i];
+			++nameCursor;
+
+		}
+
+	}
+
+	//fill rest of name field with zeros.
+	for(; nameCursor<8; nameCursor++) {
+		buffer[nameCursor] = '\0';
+	}
 
 }
 
@@ -220,6 +308,77 @@ int openDir(int diskID, char* directoryName) {
 
 	}
 
+	return 0;
+
+}
+
+/**
+ * Creates a directory with a given
+ * name in the current directory.
+ * Parameters:
+ * name: the name of the directory to be created.
+ * Returns 0 if successful. Returns -1 if an error occurred.
+ */
+int createDir(char* directoryName) {
+
+	if(strlen(directoryName) > 7) {
+		return -1;
+	}
+
+	char* tempBuffer = malloc(PGSIZE * sizeof(char));
+	char* dirBuffer = malloc(PGSIZE * sizeof(char));
+
+	int sectorNumber = findUnwrittenIndex();
+
+	readFromDisk(currentProcess()->currentDisk, currentProcess()->currentDirectorySector, tempBuffer);
+
+	int parentInode = tempBuffer[0];
+
+	//we make the file header.
+
+	//put in inode.
+	dirBuffer[0] = currentInode;
+	++currentInode;
+
+	//put in name from directoryName
+	insertName(directoryName, dirBuffer);
+
+	//put time in the header.
+	long currTime = getTimeOfDay();
+	char* timeBytes = (char*)&currTime;
+
+	dirBuffer[10] = timeBytes[2];
+	dirBuffer[9] = timeBytes[1];
+	dirBuffer[8] = timeBytes[0];
+
+	int fileDescription = 1;
+	fileDescription += (2 << 1);
+	fileDescription += (parentInode << 3);
+
+	dirBuffer[11] = fileDescription;
+
+	//find the index sector for the new dir, and put its
+	//msb and lsb in the buffer.
+	long newDirIndex = findOpenSector();
+	dirBuffer[13] = (newDirIndex >> 8) & 0xFF;
+	dirBuffer[12] = newDirIndex & 0xFF;
+
+	dirBuffer[14] = '\0';
+	dirBuffer[15] = '\0';
+
+	//write file header
+	writeToDisk(currentProcess()->currentDisk, sectorNumber, dirBuffer);
+
+	for(int i = 0; i<PGSIZE; i=i+2) {
+
+		long indexLocation = findOpenSector();
+		dirBuffer[i+1] = (indexLocation >> 8) & 0xFF;
+		dirBuffer[i] = indexLocation & 0xFF;
+
+	}
+
+	//write file index.
+	writeToDisk(currentProcess()->currentDisk, newDirIndex, dirBuffer);
 	return 0;
 
 }

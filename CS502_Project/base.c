@@ -164,7 +164,7 @@ void InterruptHandler(void) {
     	} else if(DeviceID == DISK_INTERRUPT_DISK0 || DeviceID == DISK_INTERRUPT_DISK1 || DeviceID == 7
     			|| DeviceID == 8 || DeviceID == 9 || DeviceID == 10 || DeviceID == 11 || DeviceID == 12) {
 
-    		interruptPrint("Interrupt Handler: Disk interrupt found\n");
+
     		int diskID = DeviceID - 5;
 
     		diskLock();
@@ -198,9 +198,36 @@ void InterruptHandler(void) {
 
     		if(Status != ERR_SUCCESS) {
 
-    			aprintf("Disk Interrupt error. Status was: %d", Status);
+
+    			switch(Status) {
+
+    				case ERR_BAD_PARAM: {
+
+    					interruptPrint("Interrupt Handler: DISK ERROR Bad Parameter\n");
+    					break;
+
+    				}
+
+    				case ERR_NO_PREVIOUS_WRITE: {
+
+						interruptPrint("Interrupt Handler: Disk read attempted on sector not written to\n");
+						break;
+
+					}
+
+    				case ERR_DISK_IN_USE: {
+
+						interruptPrint("Interrupt Handler: DISK ERROR Disk in use\n");
+						break;
+
+					}
+
+    			}
+
     			exit(0);
 
+    		} else {
+    			interruptPrint("Interrupt Handler: Disk interrupt found\n");
     		}
 
     	}
@@ -493,6 +520,23 @@ void svc(SYSTEM_CALL_DATA *SystemCallData) {
     		long* errorReturned = (long*)SystemCallData->Argument[2];
 
     		long result = openDir(diskID, dirName);
+
+    		if(result == 0) {
+    			*errorReturned = ERR_SUCCESS;
+    		} else {
+    			*errorReturned = result;
+    		}
+
+    		break;
+    	}
+
+    	case SYSNUM_CREATE_DIR: {
+
+    		char* directoryName = (char*)SystemCallData->Argument[0];
+    		long* errorReturned = (long*)SystemCallData->Argument[1];
+
+    		long result = createDir(directoryName);
+
 
     		if(result == 0) {
     			*errorReturned = ERR_SUCCESS;

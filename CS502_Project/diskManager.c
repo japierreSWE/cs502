@@ -107,14 +107,6 @@ void writeToDisk(long diskID, long sector, char* writeBuffer) {
 	addToDiskQueue(diskID);
 	dispatch();
 
-	if(mmio.Field4 == ERR_BAD_PARAM) {
-		aprintf("ERROR: Invalid parameter for disk write.\n");
-		exit(0);
-	} else if(mmio.Field4 == ERR_DISK_IN_USE) {
-		aprintf("ERROR: Disk write attempted when disk is already in use.\n");
-		exit(0);
-	}
-
 }
 
 /**
@@ -123,8 +115,9 @@ void writeToDisk(long diskID, long sector, char* writeBuffer) {
  * diskID: the diskID to read from.
  * sector: the sector to read from.
  * readBuffer: the address to send the data to.
+ * Returns 0 if successful. Returns -2 if disk wasn't written to yet.
  */
-void readFromDisk(long diskID, long sector, char* readBuffer) {
+int readFromDisk(long diskID, long sector, char* readBuffer) {
 
 	//ask for disk read.
 	MEMORY_MAPPED_IO mmio;
@@ -146,12 +139,8 @@ void readFromDisk(long diskID, long sector, char* readBuffer) {
 	dispatch();
 
 	if(mmio.Field4 == ERR_BAD_PARAM) {
-		aprintf("ERROR: Invalid parameter for disk read.\n");
-	} else if(mmio.Field4 == ERR_DISK_IN_USE) {
-		aprintf("ERROR: Disk read attempted when disk is already in use.\n");
-	} else if(mmio.Field4 == ERR_NO_PREVIOUS_WRITE) {
-		aprintf("ERROR: Read from a sector that hasn't been written to.\n");
-	}
+		return -2;
+	} else return 0;
 
 }
 
