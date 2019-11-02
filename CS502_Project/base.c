@@ -547,6 +547,23 @@ void svc(SYSTEM_CALL_DATA *SystemCallData) {
     		break;
     	}
 
+    	case SYSNUM_CREATE_FILE: {
+
+    		char* fileName = (char*)SystemCallData->Argument[0];
+    		long* errorReturned = (long*)SystemCallData->Argument[1];
+
+    		long result = createFile(fileName);
+
+    		if(result == 0) {
+				*errorReturned = ERR_SUCCESS;
+			} else {
+				*errorReturned = result;
+			}
+
+			break;
+
+    	}
+
     }
 
 }                                               // End of svc

@@ -15,6 +15,7 @@
 #include "processManager.h"
 #include "moreGlobals.h"
 #include "diskManager.h"
+#include "fileSystem.h"
 
 void schedulePrint();
 int inReadyQueue(long pid);
@@ -251,6 +252,7 @@ long terminateProcess(long pid) {
 
 		//if there are no remaining processes, shut down.
 		if(numProcesses == 0) {
+			flushDiskContents();
 			MEM_WRITE(Z502Halt, 0);
 		}
 
@@ -262,6 +264,7 @@ long terminateProcess(long pid) {
 
 	} else if(pid == -2) {
 		//terminate the current process and all children.
+		flushDiskContents();
 		MEM_WRITE(Z502Halt, 0);
 		return 0;
 	} else {

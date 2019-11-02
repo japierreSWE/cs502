@@ -10,12 +10,27 @@
 #include "syscalls.h"
 #include "protos.h"
 #include "diskManager.h"
+#include "processManager.h"
+#include "fileSystem.h"
 #include <stdlib.h>
+#include <string.h>
+
+void bufferCopy(char* src, char* dest);
+void initDiskContents();
+int isUnwritten(char* buffer);
+int isDir(char* buffer);
+long findOpenSector();
+int findUnwrittenIndex();
+void insertName(char* fileName, char* buffer);
+int hasName(char* buffer, char* fileName);
+
 
 int rootSector = 0x11;
 int bitmapSector = 0x01;
 int bitmapSize; //# of sectors the bitmap takes up.
 int currentInode = 0x01; //the next inode we'll use for a file.
+
+char** diskContents; //the contents of the disk stored in memory.
 
 /**
  * Formats a disk for it to be used
@@ -31,7 +46,7 @@ int formatDisk(int diskID) {
 		return -1;
 	}
 
-	currentProcess()->currentDisk = diskID;
+	initDiskContents();
 
 	char* sectorZeroBuffer = malloc(PGSIZE * sizeof(char));
 
@@ -74,6 +89,8 @@ int formatDisk(int diskID) {
 
 	writeToDisk(diskID, 0, sectorZeroBuffer);
 
+	bufferCopy(sectorZeroBuffer, diskContents[0]);
+
 	//we use this for all sectors other than the 0th one.
 	//write part of bitmap covering the swap space.
 	char* tempBuffer = malloc(PGSIZE * sizeof(char));
@@ -87,6 +104,11 @@ int formatDisk(int diskID) {
 	writeToDisk(diskID, 0x0F, tempBuffer);
 	writeToDisk(diskID, 0x10, tempBuffer);
 
+	bufferCopy(tempBuffer, diskContents[0x0D]);
+	bufferCopy(tempBuffer, diskContents[0x0E]);
+	bufferCopy(tempBuffer, diskContents[0x0F]);
+	bufferCopy(tempBuffer, diskContents[0x10]);
+
 	//part of bitmap for lines 0-1B
 	tempBuffer[3] = 0xE0;
 
@@ -95,6 +117,8 @@ int formatDisk(int diskID) {
 	}
 
 	writeToDisk(diskID, bitmapSector, tempBuffer);
+
+	bufferCopy(tempBuffer, diskContents[bitmapSector]);
 
 
 	//now we make the buffer contain root's header
@@ -134,6 +158,7 @@ int formatDisk(int diskID) {
 
 	writeToDisk(diskID, rootSector, tempBuffer);
 
+	bufferCopy(tempBuffer, diskContents[rootSector]);
 
 	//now we make the index sector.
 	tempBuffer[0] = 0x13;
@@ -155,11 +180,99 @@ int formatDisk(int diskID) {
 
 	writeToDisk(diskID, 0x12, tempBuffer);
 
+	bufferCopy(tempBuffer, diskContents[0x12]);
+
 	//we don't need these anymore
 	free(tempBuffer);
 	free(sectorZeroBuffer);
 
 	return 0;
+
+}
+
+/**
+ * Copies the contents from the buffer src
+ * to the buffer dest.
+ * Src and dest are buffers representing
+ * disk sectors.
+ */
+void bufferCopy(char* src, char* dest) {
+
+	for(int i = 0; i<PGSIZE; i++) {
+
+		dest[i] = src[i];
+
+	}
+
+}
+
+/**
+ * Initializes the pointers used to
+ * keep the disk contents in memory.
+ */
+void initDiskContents() {
+
+	diskContents = calloc(NUMBER_LOGICAL_SECTORS, sizeof(char*));
+
+	for(int i = 0; i<NUMBER_LOGICAL_SECTORS; i++) {
+
+		diskContents[i] = calloc(PGSIZE, sizeof(char));
+
+		//initialize sectors with zeroes.
+		for(int j = 0; j<PGSIZE; j++) {
+
+			diskContents[i][j] = '\0';
+
+		}
+
+	}
+
+}
+
+/**
+ * Writes the contents of
+ * diskContents to disk
+ * so that they can be
+ * shown in checkDisk.
+ */
+void flushDiskContents() {
+
+	long index = 0;
+	//update the bitmap and all
+	//sectors that have been indicated
+	//in the bitmap.
+	for(int i = bitmapSector; i<bitmapSector+bitmapSize; i++) {
+
+		char* sector = diskContents[i];
+
+		//if we haven't written to this part of the bitmap.
+		if(isUnwritten(sector)) {
+			return;
+		} else {
+			writeToDisk(currentProcess()->currentDisk, i, sector);
+		}
+
+		for(int j = 0; j<PGSIZE; j++) {
+
+			for(int k = 0; k<8; k++) {
+
+				int shiftAmount = (7 - k); //starts at 3, goes to 0
+				int masked = sector[j] & (1 << shiftAmount);
+
+				//if we find a bit.
+				if(masked >> shiftAmount == 1) {
+
+					writeToDisk(currentProcess()->currentDisk, index, diskContents[index]);
+
+				}
+
+				++index;
+
+			}
+
+		}
+
+	}
 
 }
 
@@ -172,32 +285,32 @@ int formatDisk(int diskID) {
  */
 long findOpenSector() {
 
+	//TODO: put lock on bitmap.
 	long index = 0;
 	char* tempBuffer = malloc(PGSIZE * sizeof(char));
-	int foundAvailable = 0;
 
 	for(int i = bitmapSector; i<bitmapSector+bitmapSize; i++) {
 
-		int result = readFromDisk(currentProcess()->currentDisk, i, tempBuffer);
+		char* sector = diskContents[i];
 
 		//if we haven't written to this part of the bitmap.
-		if(result == -2) {
+		if(isUnwritten(sector)) {
 			return index;
 		}
 
 		for(int j = 0; j<PGSIZE; j++) {
 
-			for(int k = 0; k<4; k++) {
+			for(int k = 0; k<8; k++) {
 
-				int shiftAmount = (3 - k); //starts at 3, goes to 0
-				int masked = tempBuffer[j] & (1 << shiftAmount);
+				int shiftAmount = (7 - k); //starts at 7, goes to 0
+				int masked = sector[j] & (1 << shiftAmount);
 
 				//if we find a zero bit.
 				if(masked >> shiftAmount != 1) {
 
 					//flip the bit, then write.
-					tempBuffer[j] = tempBuffer[j] | (1 << shiftAmount);
-					writeToDisk(currentProcess()->currentDisk, i, tempBuffer);
+					sector[j] = sector[j] | (1 << shiftAmount);
+					bufferCopy(sector, diskContents[i]);
 					free(tempBuffer);
 					return index;
 				}
@@ -229,23 +342,25 @@ int findUnwrittenIndex() {
 	char* dirBuffer = malloc(PGSIZE * sizeof(char));
 	int sectorNumber;
 
-	readFromDisk(currentProcess()->currentDisk, currentProcess()->currentDirectorySector, tempBuffer);
+	char* currentDirectory = diskContents[currentProcess()->currentDirectorySector];
 
-	int indexMsb = tempBuffer[13];
-	int indexLsb = tempBuffer[12];
+	int indexMsb = currentDirectory[13];
+	int indexLsb = currentDirectory[12];
 
 	int indexSector = (indexMsb << 8) + indexLsb;
 
+	char* indexSectorBuffer =diskContents[indexSector];
+
 	for(int i = 0; i<PGSIZE; i=i+2) {
 
-		int msb = tempBuffer[i+1];
-		int lsb = tempBuffer[i];
+		int msb = indexSectorBuffer[i+1];
+		int lsb = indexSectorBuffer[i];
 
 		//shift msb so that it can be combined w/ lsb.
 		sectorNumber = (msb << 8) + lsb;
 
 		//looking for an index not already written to.
-		if(readFromDisk(currentProcess()->currentDisk, sectorNumber, dirBuffer) == -2) {
+		if(isUnwritten(diskContents[sectorNumber])) {
 
 			free(tempBuffer);
 			free(dirBuffer);
@@ -255,7 +370,7 @@ int findUnwrittenIndex() {
 
 	}
 
-	//TODO: make a new index level if the first 7 are written to.
+	return -1;
 
 }
 
@@ -290,14 +405,83 @@ void insertName(char* fileName, char* buffer) {
 }
 
 /**
+ * Determines whether a file has a given name.
+ * Parameters:
+ * fileName: the name we are looking for.
+ * buffer: a buffer representing a file header.
+ * Returns 1 if the name in buffer is equal to fileName
+ * Returns 0 otherwise.
+ */
+int hasName(char* buffer, char* fileName) {
+
+	for(int i = 0; fileName[i]!='\0'; i++) {
+
+		if(buffer[i] != fileName[i]) return 0;
+
+	}
+
+	return 1;
+
+}
+
+/**
+ * Checks a disk sector and determines
+ * whether it has been written to.
+ * Parameters:
+ * buffer: a buffer representing a disk sector.
+ * Returns 1 if the buffer isn't written to.
+ * Returns 0 otherwise.
+ */
+int isUnwritten(char* buffer) {
+
+	for(int i = 0; i<PGSIZE; i++) {
+
+		if(buffer[i] != '\0') {
+			return 0;
+		}
+
+	}
+
+	return 1;
+
+}
+
+/**
+ * Returns whether a file header is a
+ * directory.
+ * Parameters:
+ * buffer: a buffer representing a file header.
+ * Returns 1 if the file header is a buffer.
+ * Returns 0 otherwise.
+ */
+int isDir(char* buffer) {
+	char description = buffer[11];
+
+	//directories have their 1st bit set.
+	//files don't.
+	int result = description & 0x01;
+
+	if(result == 1) return 1;
+	else return 0;
+
+}
+
+/**
  * Opens a directory, making it the current directory.
  * Parameters:
  * diskID: the diskID to open the directory in.
  * if -1, find the directory in the current directory.
+ * Returns 0 if successful. Returns -1 if an error occurred.
  */
 int openDir(int diskID, char* directoryName) {
 
-	if(diskID < 0 || diskID >= MAX_NUMBER_OF_DISKS) {
+	//diskID out of range
+	if(diskID >= MAX_NUMBER_OF_DISKS) {
+		return -1;
+	}
+
+	//we don't have a current directory yet, we can't use diskID=-1.
+	if(diskID == -1 && currentProcess()->currentDirectorySector == -1) {
 		return -1;
 	}
 
@@ -305,10 +489,70 @@ int openDir(int diskID, char* directoryName) {
 	if(currentProcess()->currentDirectorySector == -1 && strcmp(directoryName,"root") == 0) {
 
 		currentProcess()->currentDirectorySector = rootSector;
+		currentProcess()->currentDisk = diskID;
+		initDiskContents();
+
+		return 0;
 
 	}
 
-	return 0;
+	char* dirBuffer = malloc(PGSIZE * sizeof(char));
+
+	char* tempBuffer = diskContents[currentProcess()->currentDirectorySector];
+
+	int indexMsb = tempBuffer[13];
+	int indexLsb = tempBuffer[12];
+
+	int indexSector = (indexMsb << 8) + indexLsb;
+
+	tempBuffer = diskContents[indexSector];
+
+	int cursor = 0;
+
+	do {
+
+		indexMsb = tempBuffer[cursor];
+		indexLsb = tempBuffer[cursor+1];
+
+		indexSector = (indexMsb << 8) + indexLsb;
+
+		dirBuffer = diskContents[indexSector];
+
+		if(isUnwritten(dirBuffer)) {
+			//we didn't find the file.
+			int createResult = createDir(directoryName);
+
+			if(createResult == 0) return openDir(diskID, directoryName);
+
+			else return -1;
+
+		}
+
+
+		//which would mean we're at the end.
+		//TODO: at the moment, disks have no
+		//further index levels. we will change how this case
+		//works should that change in the future.
+		if(cursor == 14) {
+
+			aprintf("Ran out of space for dirs on open.");
+			exit(0);
+
+		}
+		//the file has the name we're looking for
+		//and is a directory.
+		else if(hasName(dirBuffer, directoryName) && isDir(dirBuffer)) {
+
+			currentProcess()->currentDirectorySector = indexSector;
+			return 0;
+
+		}
+		 else {
+			//we haven't reached the end yet.
+			cursor+=2;
+		}
+
+	} while(1);
 
 }
 
@@ -330,9 +574,14 @@ int createDir(char* directoryName) {
 
 	int sectorNumber = findUnwrittenIndex();
 
-	readFromDisk(currentProcess()->currentDisk, currentProcess()->currentDirectorySector, tempBuffer);
+	if(sectorNumber == -1) {
+		aprintf("Create Dir: Not enough space for dir.\n");
+		return -1;
+	}
 
-	int parentInode = tempBuffer[0];
+	char* currentDirectory = diskContents[currentProcess()->currentDirectorySector];
+
+	int parentInode = currentDirectory[0];
 
 	//we make the file header.
 
@@ -367,7 +616,7 @@ int createDir(char* directoryName) {
 	dirBuffer[15] = '\0';
 
 	//write file header
-	writeToDisk(currentProcess()->currentDisk, sectorNumber, dirBuffer);
+	bufferCopy(dirBuffer, diskContents[sectorNumber]);
 
 	for(int i = 0; i<PGSIZE; i=i+2) {
 
@@ -378,7 +627,91 @@ int createDir(char* directoryName) {
 	}
 
 	//write file index.
-	writeToDisk(currentProcess()->currentDisk, newDirIndex, dirBuffer);
+	bufferCopy(dirBuffer, diskContents[newDirIndex]);
+	free(tempBuffer);
+	free(dirBuffer);
+	return 0;
+
+}
+
+/**
+ * Creates a file with a given
+ * name in the current directory.
+ * Parameters:
+ * name: the name of the file to be created.
+ * Returns 0 if successful. Returns -1 if an error occurred.
+ *
+ * NOTE: files have an index level of 3. Not all sectors are
+ * allocated at first, but are allocated as needed. ie. they're
+ * allocated based on WRITE_FILE calls.
+ */
+int createFile(char* directoryName) {
+
+	if(strlen(directoryName) > 7) {
+		return -1;
+	}
+
+	char* tempBuffer = malloc(PGSIZE * sizeof(char));
+	char* fileBuffer = malloc(PGSIZE * sizeof(char));
+
+	int sectorNumber = findUnwrittenIndex();
+
+	if(sectorNumber == -1) {
+		aprintf("Create Dir: Not enough space for dir.\n");
+		return -1;
+	}
+
+	char* currentDirectory = diskContents[currentProcess()->currentDirectorySector];
+
+	int parentInode = currentDirectory[0];
+
+	//we make the file header.
+
+	//put in inode.
+	fileBuffer[0] = currentInode;
+	++currentInode;
+
+	//put in name from directoryName
+	insertName(directoryName, fileBuffer);
+
+	//put time in the header.
+	long currTime = getTimeOfDay();
+	char* timeBytes = (char*)&currTime;
+
+	fileBuffer[10] = timeBytes[2];
+	fileBuffer[9] = timeBytes[1];
+	fileBuffer[8] = timeBytes[0];
+
+	int fileDescription = 0;
+	fileDescription += (3 << 1);
+	fileDescription += (parentInode << 3);
+
+	fileBuffer[11] = fileDescription;
+
+	//find the index sector for the new dir, and put its
+	//msb and lsb in the buffer.
+	long newFileIndex = findOpenSector();
+	fileBuffer[13] = (newFileIndex >> 8) & 0xFF;
+	fileBuffer[12] = newFileIndex & 0xFF;
+
+	fileBuffer[14] = '\0';
+	fileBuffer[15] = '\0';
+
+	//write file header
+	bufferCopy(fileBuffer, diskContents[sectorNumber]);
+
+	for(int i = 0; i<PGSIZE; i=i+2) {
+
+		long indexLocation = findOpenSector();
+		fileBuffer[i+1] = (indexLocation >> 8) & 0xFF;
+		fileBuffer[i] = indexLocation & 0xFF;
+
+	}
+
+	//write file index.
+	bufferCopy(fileBuffer, diskContents[newFileIndex]);
+	free(tempBuffer);
+	free(fileBuffer);
 	return 0;
 
 }

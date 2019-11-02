@@ -12,7 +12,7 @@
 
 void initDiskManager();
 void writeToDisk(long diskID, long sector, char* writeBuffer);
-void readFromDisk(long diskID, long sector, char* readBuffer);
+int readFromDisk(long diskID, long sector, char* readBuffer);
 void checkDisk(long diskID);
 long getDiskStatus(long diskID);
 void addToDiskQueue(long diskID);
