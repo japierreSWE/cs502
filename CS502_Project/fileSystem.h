@@ -18,6 +18,8 @@ int createDir(char* directoryName);
 int createFile(char* directoryName);
 int openFile(char* fileName);
 int writeFile(int inode, int logicalBlock, char* writeBuffer);
+int closeFile(int inode);
+int readFile(int inode, int logicalBlock, char* readBuffer);
 
 int formattedDisk;
 

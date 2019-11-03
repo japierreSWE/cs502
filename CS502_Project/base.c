@@ -614,6 +614,26 @@ void svc(SYSTEM_CALL_DATA *SystemCallData) {
     			*errorReturned = result;
     		}
 
+    		break;
+    	}
+
+    	case SYSNUM_READ_FILE: {
+
+    		int inode = (int)SystemCallData->Argument[0];
+			int logicalBlock = (int)SystemCallData->Argument[1];
+			char* readBuffer = (char*)SystemCallData->Argument[2];
+			long* errorReturned = (long*)SystemCallData->Argument[3];
+
+			int result = readFile(inode, logicalBlock, readBuffer);
+
+			if(result == 0) {
+				*errorReturned = ERR_SUCCESS;
+			} else {
+				*errorReturned = result;
+			}
+
+			break;
+
     	}
 
     }

@@ -916,6 +916,11 @@ int writeFile(int inode, int logicalBlock, char* writeBuffer) {
 		return -1;
 	}
 
+	//logical block outside of range.
+	if(logicalBlock < 0 || logicalBlock >= 512) {
+		return -1;
+	}
+
 	OpenFile* file = QWalk(openFilesQueueId, inode);
 	char* fileHeader = diskContents[file->sector];
 
@@ -931,6 +936,40 @@ int writeFile(int inode, int logicalBlock, char* writeBuffer) {
 
 	return 0;
 
+}
+
+/**
+ * Reads a given data block from a given file.
+ * Parameters:
+ * inode: the inode of the file to be written to.
+ * logicalBlock: the block to be written.
+ * readBuffer: the buffer which will contain data read.
+ * Returns 0 if successful and -1 if an error occurred.
+ */
+int readFile(int inode, int logicalBlock, char* readBuffer) {
+
+	//means this inode isn't open.
+	if((int)QWalk(openFilesQueueId, inode) == -1) {
+		return -1;
+	}
+
+	//logical block outside of range.
+	if(logicalBlock < 0 || logicalBlock >= 512) {
+		return -1;
+	}
+
+	OpenFile* file = QWalk(openFilesQueueId, inode);
+	char* fileHeader = diskContents[file->sector];
+
+	int topIndexMsb = fileHeader[13];
+	int topIndexLsb = fileHeader[12];
+
+	int topIndexSector = (topIndexMsb << 8) + topIndexLsb;
+
+	int dataBlockSector = findDataBlockSector(logicalBlock, topIndexSector);
+
+	readFromDisk(currentProcess()->currentDisk, dataBlockSector, readBuffer);
+	return 0;
 }
 
 /**
