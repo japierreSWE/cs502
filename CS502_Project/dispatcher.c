@@ -235,6 +235,7 @@ void addToReadyQueue(Process* process) {
 long terminateProcess(long pid) {
 
 	if(pid == -1) {
+
 		//shut down the current process.
 		//remove it from ready queue and process queue.
 		Process* current = currentProcess();
@@ -252,7 +253,6 @@ long terminateProcess(long pid) {
 
 		//if there are no remaining processes, shut down.
 		if(numProcesses == 0) {
-			flushDiskContents();
 			MEM_WRITE(Z502Halt, 0);
 		}
 
@@ -263,8 +263,8 @@ long terminateProcess(long pid) {
 		return 0;
 
 	} else if(pid == -2) {
+
 		//terminate the current process and all children.
-		flushDiskContents();
 		MEM_WRITE(Z502Halt, 0);
 		return 0;
 	} else {

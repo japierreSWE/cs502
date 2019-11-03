@@ -15,6 +15,7 @@
 #include "moreGlobals.h"
 #include "processManager.h"
 #include "dispatcher.h"
+#include "fileSystem.h"
 
 /**
  * Initializes the disk manager by creating the disk queue.
@@ -150,6 +151,10 @@ int readFromDisk(long diskID, long sector, char* readBuffer) {
  * diskID: the ID of the disk to check.
  */
 void checkDisk(long diskID) {
+
+	if(formattedDisk) {
+		flushDiskContents();
+	}
 
 	//make request to hardware to check the disk.
 	MEMORY_MAPPED_IO mmio;

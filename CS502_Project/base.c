@@ -564,6 +564,23 @@ void svc(SYSTEM_CALL_DATA *SystemCallData) {
 
     	}
 
+    	case SYSNUM_OPEN_FILE: {
+
+    		char* fileName = (char*)SystemCallData->Argument[0];
+    		int* inode = (int*)SystemCallData->Argument[1];
+    		long* errorReturned = (long*)SystemCallData->Argument[2];
+
+    		int result = openFile(fileName);
+
+    		if(result == -1) {
+    			*errorReturned = result;
+    		} else {
+    			*errorReturned = ERR_SUCCESS;
+    			*inode = result;
+    		}
+
+    	}
+
     }
 
 }                                               // End of svc
@@ -730,6 +747,11 @@ void osInit(int argc, char *argv[]) {
     } else if((argc > 1) && (strcmp(argv[1], "test21") == 0)) {
 
     	long address = (long)test21;
+    	pcbInit(address, (long)PageTable);
+
+    } else if((argc > 1) && (strcmp(argv[1], "test22") == 0)) {
+
+    	long address = (long)test22;
     	pcbInit(address, (long)PageTable);
 
     }

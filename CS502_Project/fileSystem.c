@@ -47,6 +47,7 @@ int formatDisk(int diskID) {
 	}
 
 	initDiskContents();
+	formattedDisk = 1;
 
 	char* sectorZeroBuffer = malloc(PGSIZE * sizeof(char));
 
@@ -364,7 +365,7 @@ int findUnwrittenIndex() {
 
 			free(tempBuffer);
 			free(dirBuffer);
-			return indexSector;
+			return sectorNumber;
 
 		}
 
@@ -416,7 +417,7 @@ int hasName(char* buffer, char* fileName) {
 
 	for(int i = 0; fileName[i]!='\0'; i++) {
 
-		if(buffer[i] != fileName[i]) return 0;
+		if(buffer[i+1] != fileName[i]) return 0;
 
 	}
 
@@ -490,7 +491,6 @@ int openDir(int diskID, char* directoryName) {
 
 		currentProcess()->currentDirectorySector = rootSector;
 		currentProcess()->currentDisk = diskID;
-		initDiskContents();
 
 		return 0;
 
@@ -498,7 +498,8 @@ int openDir(int diskID, char* directoryName) {
 
 	char* dirBuffer = malloc(PGSIZE * sizeof(char));
 
-	char* tempBuffer = diskContents[currentProcess()->currentDirectorySector];
+	int currentSector = currentProcess()->currentDirectorySector;
+	char* tempBuffer = diskContents[currentSector];
 
 	int indexMsb = tempBuffer[13];
 	int indexLsb = tempBuffer[12];
@@ -511,8 +512,8 @@ int openDir(int diskID, char* directoryName) {
 
 	do {
 
-		indexMsb = tempBuffer[cursor];
-		indexLsb = tempBuffer[cursor+1];
+		indexLsb = tempBuffer[cursor];
+		indexMsb = tempBuffer[cursor+1];
 
 		indexSector = (indexMsb << 8) + indexLsb;
 
@@ -535,7 +536,7 @@ int openDir(int diskID, char* directoryName) {
 		//works should that change in the future.
 		if(cursor == 14) {
 
-			aprintf("Ran out of space for dirs on open.");
+			aprintf("Ran out of space for dirs on open.\n");
 			exit(0);
 
 		}
@@ -645,9 +646,9 @@ int createDir(char* directoryName) {
  * allocated at first, but are allocated as needed. ie. they're
  * allocated based on WRITE_FILE calls.
  */
-int createFile(char* directoryName) {
+int createFile(char* fileName) {
 
-	if(strlen(directoryName) > 7) {
+	if(strlen(fileName) > 7) {
 		return -1;
 	}
 
@@ -672,7 +673,7 @@ int createFile(char* directoryName) {
 	++currentInode;
 
 	//put in name from directoryName
-	insertName(directoryName, fileBuffer);
+	insertName(fileName, fileBuffer);
 
 	//put time in the header.
 	long currTime = getTimeOfDay();
@@ -713,5 +714,75 @@ int createFile(char* directoryName) {
 	free(tempBuffer);
 	free(fileBuffer);
 	return 0;
+
+}
+
+/**
+ * Opens a file with a given name
+ * in the current directory.
+ * Parameters:
+ * fileName: the name of the file to be opened.
+ * Returns the file's inode if successful
+ * Returns -1 if an error occurs.
+ */
+int openFile(char* fileName) {
+
+	char* fileBuffer = 0;
+
+	int currentSector = currentProcess()->currentDirectorySector;
+	char* tempBuffer = diskContents[currentSector];
+
+	int indexMsb = tempBuffer[13];
+	int indexLsb = tempBuffer[12];
+
+	int indexSector = (indexMsb << 8) + indexLsb;
+
+	tempBuffer = diskContents[indexSector];
+
+	int cursor = 0;
+
+	do {
+
+		indexLsb = tempBuffer[cursor];
+		indexMsb = tempBuffer[cursor+1];
+
+		indexSector = (indexMsb << 8) + indexLsb;
+
+		fileBuffer = diskContents[indexSector];
+
+		if(isUnwritten(fileBuffer)) {
+			//we didn't find the file.
+			int createResult = createFile(fileName);
+
+			if(createResult == 0) return openFile(fileName);
+
+			else return -1;
+
+		}
+
+
+		//which would mean we're at the end.
+		//TODO: at the moment, dirs have no
+		//further index levels. we will change how this case
+		//works should that change in the future.
+		if(cursor == 14) {
+
+			aprintf("Ran out of space for files.\n");
+			exit(0);
+
+		}
+		//the file has the name we're looking for
+		//and is not a directory.
+		else if(hasName(fileBuffer, fileName) && !isDir(fileBuffer)) {
+
+			return fileBuffer[0];
+
+		}
+		 else {
+			//we haven't reached the end yet.
+			cursor+=2;
+		}
+
+	} while(1);
 
 }

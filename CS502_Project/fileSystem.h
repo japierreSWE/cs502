@@ -16,5 +16,8 @@ int openDir(int diskID, char* directoryName);
 void flushDiskContents();
 int createDir(char* directoryName);
 int createFile(char* directoryName);
+int openFile(char* fileName);
+
+int formattedDisk;
 
 #endif /* FILESYSTEM_H_ */
