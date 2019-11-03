@@ -579,6 +579,26 @@ void svc(SYSTEM_CALL_DATA *SystemCallData) {
     			*inode = result;
     		}
 
+    		break;
+    	}
+
+    	case SYSNUM_WRITE_FILE: {
+
+    		int inode = (int)SystemCallData->Argument[0];
+    		int logicalBlock = (int)SystemCallData->Argument[1];
+    		char* writeBuffer = (char*)SystemCallData->Argument[2];
+    		long* errorReturned = (long*)SystemCallData->Argument[3];
+
+    		int result = writeFile(inode, logicalBlock, writeBuffer);
+
+    		if(result == 0) {
+				*errorReturned = ERR_SUCCESS;
+			} else {
+				*errorReturned = result;
+			}
+
+    		break;
+
     	}
 
     }

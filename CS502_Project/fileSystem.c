@@ -24,11 +24,21 @@ int findUnwrittenIndex();
 void insertName(char* fileName, char* buffer);
 int hasName(char* buffer, char* fileName);
 
+//A structure representing an open file.
+//inode: the file's inode.
+//sector: the sector at which its file header is located.
+typedef struct {
 
-int rootSector = 0x11;
+	int inode;
+	int sector;
+
+} OpenFile;
+
+int rootSector = 0x11; //the sectors of the root directory and bitmap.
 int bitmapSector = 0x01;
 int bitmapSize; //# of sectors the bitmap takes up.
 int currentInode = 0x01; //the next inode we'll use for a file.
+int openFilesQueueId;
 
 char** diskContents; //the contents of the disk stored in memory.
 
@@ -48,6 +58,9 @@ int formatDisk(int diskID) {
 
 	initDiskContents();
 	formattedDisk = 1;
+
+	//TODO: put a lock on this queue.
+	openFilesQueueId = QCreate("openFilesQ");
 
 	char* sectorZeroBuffer = malloc(PGSIZE * sizeof(char));
 
@@ -775,6 +788,14 @@ int openFile(char* fileName) {
 		//and is not a directory.
 		else if(hasName(fileBuffer, fileName) && !isDir(fileBuffer)) {
 
+			//we put this file in the open
+			//files queue. its QOrder is the
+			//inode number.
+			OpenFile* file = malloc(sizeof(OpenFile));
+			file->inode = fileBuffer[0];
+			file->sector = indexSector;
+			QInsert(openFilesQueueId, fileBuffer[0], file);
+
 			return fileBuffer[0];
 
 		}
@@ -784,5 +805,130 @@ int openFile(char* fileName) {
 		}
 
 	} while(1);
+
+}
+
+/**
+ * At a currently unwritten buffer which should be
+ * an index sector, allocate a set of indices and
+ * turn the buffer into an index sector.
+ * Returns 0 if successful, returns -1 if an error occurred.
+ */
+int allocateIndices(char* buffer) {
+
+	for(int i = 0; i<PGSIZE; i = i+2) {
+
+		long indexLocation = findOpenSector();
+
+		if(indexLocation == -1) return -1;
+
+		buffer[i+1] = (indexLocation >> 8) & 0xFF;
+		buffer[i] = indexLocation & 0xFF;
+
+	}
+
+}
+
+/**
+ * Finds the sector that a given datablock should be
+ * found for a file's given top-level index sector.
+ * Files have an index level of 3.
+ * Parameters:
+ * logicalBlock: the logical number of the datablock to find.
+ * topIndexSector: the sector of the file's top-level index.
+ * Returns the sector the datablock should be found at.
+ */
+int findDataBlockSector(int logicalBlock, int topIndexSector) {
+
+	//we start at the top index.
+	char* tempBuffer = diskContents[topIndexSector];
+
+	//this will be used to calculate where to put the data block.
+	int num = logicalBlock;
+
+	int subtractionsBy64 = 0;
+
+	while(num >= 64) {
+		num -= 64;
+		++subtractionsBy64;
+	}
+
+	int midIndexMsb = tempBuffer[subtractionsBy64 + 1];
+	int midIndexLsb = tempBuffer[subtractionsBy64];
+
+	int midIndexSector = (midIndexMsb << 8) + midIndexLsb;
+
+	if(isUnwritten(diskContents[midIndexSector])) {
+		int result = allocateIndices(diskContents[midIndexSector]);
+
+		if(result == -1) {
+			aprintf("Not enough space to allocate for datablock.\n");
+			exit(0);
+		}
+	}
+
+	tempBuffer = diskContents[midIndexSector];
+
+	int subtractionsBy8 = 0;
+	int lowIndex = num % 8; //which index will we put the data block in
+
+	while(num >= 8) {
+		num -= 8;
+		++subtractionsBy8;
+	}
+
+	int lowIndexMsb = tempBuffer[subtractionsBy8 + 1];
+	int lowIndexLsb = tempBuffer[subtractionsBy8];
+
+	int lowIndexSector = (lowIndexMsb << 8) + lowIndexLsb;
+
+	if(isUnwritten(diskContents[lowIndexSector])) {
+		int result = allocateIndices(diskContents[midIndexSector]);
+
+		if(result == -1) {
+			aprintf("Not enough space to allocate for datablock.\n");
+			exit(0);
+		}
+	}
+
+	tempBuffer = diskContents[lowIndexSector];
+
+	int dataBlockIndexMsb = tempBuffer[2*lowIndex + 1];
+	int dataBlockIndexLsb = tempBuffer[2*lowIndex];
+
+	int dataBlockSector = (dataBlockIndexMsb << 8) + dataBlockIndexLsb;
+
+	return dataBlockSector;
+}
+
+/**
+ * Writes a given data block to a given file.
+ * Parameters:
+ * inode: the inode of the file to be written to.
+ * logicalBlock: the block to be written.
+ * writeBuffer: the data to be written to the block.
+ * Returns 0 if successful. Returns -1 if an error occurs.
+ */
+int writeFile(int inode, int logicalBlock, char* writeBuffer) {
+
+	//means this inode isn't open.
+	if((int)QWalk(openFilesQueueId, inode) == -1) {
+		return -1;
+	}
+
+	OpenFile* file = QWalk(openFilesQueueId, inode);
+	char* fileHeader = diskContents[file->sector];
+
+	int topIndexMsb = fileHeader[13];
+	int topIndexLsb = fileHeader[12];
+
+	int topIndexSector = (topIndexMsb << 8) + topIndexLsb;
+
+	int dataBlockSector = findDataBlockSector(logicalBlock, topIndexSector);
+
+	bufferCopy(writeBuffer, diskContents[dataBlockSector]);
+	writeToDisk(currentProcess()->currentDisk, dataBlockSector, writeBuffer);
+
+	return 0;
 
 }

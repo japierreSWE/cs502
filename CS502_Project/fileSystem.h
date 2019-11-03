@@ -17,6 +17,7 @@ void flushDiskContents();
 int createDir(char* directoryName);
 int createFile(char* directoryName);
 int openFile(char* fileName);
+int writeFile(int inode, int logicalBlock, char* writeBuffer);
 
 int formattedDisk;
 
