@@ -601,6 +601,21 @@ void svc(SYSTEM_CALL_DATA *SystemCallData) {
 
     	}
 
+    	case SYSNUM_CLOSE_FILE: {
+
+    		int inode = (int)SystemCallData->Argument[0];
+    		long* errorReturned = (long*)SystemCallData->Argument[1];
+
+    		int result = closeFile(inode);
+
+    		if(result == 0) {
+    			*errorReturned = ERR_SUCCESS;
+    		} else {
+    			*errorReturned = result;
+    		}
+
+    	}
+
     }
 
 }                                               // End of svc

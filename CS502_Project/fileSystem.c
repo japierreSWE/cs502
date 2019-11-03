@@ -932,3 +932,23 @@ int writeFile(int inode, int logicalBlock, char* writeBuffer) {
 	return 0;
 
 }
+
+/**
+ * Closes a file.
+ * Parameters:
+ * inode: the inode of the file to close.
+ * Returns 0 if successful or -1 if an error occurred.
+ */
+int closeFile(int inode) {
+
+	OpenFile* file = QWalk(openFilesQueueId, inode);
+
+	if((int)file == -1) {
+		return -1;
+	} else {
+		QRemoveItem(openFilesQueueId, file);
+		flushDiskContents();
+		return 0;
+	}
+
+}
