@@ -15,6 +15,16 @@
 #include <stdlib.h>
 #include <string.h>
 
+//A structure representing an open file.
+//inode: the file's inode.
+//sector: the sector at which its file header is located.
+typedef struct {
+
+	long inode;
+	int sector;
+
+} OpenFile;
+
 void bufferCopy(char* src, char* dest);
 void initDiskContents();
 int isUnwritten(char* buffer);
@@ -23,16 +33,7 @@ long findOpenSector();
 int findUnwrittenIndex();
 void insertName(char* fileName, char* buffer);
 int hasName(char* buffer, char* fileName);
-
-//A structure representing an open file.
-//inode: the file's inode.
-//sector: the sector at which its file header is located.
-typedef struct {
-
-	int inode;
-	int sector;
-
-} OpenFile;
+OpenFile* isOpen(int inode);
 
 int rootSector = 0x11; //the sectors of the root directory and bitmap.
 int bitmapSector = 0x01;
@@ -796,6 +797,7 @@ int openFile(char* fileName) {
 			file->sector = indexSector;
 			QInsert(openFilesQueueId, fileBuffer[0], file);
 
+
 			return fileBuffer[0];
 
 		}
@@ -818,7 +820,7 @@ int allocateIndices(char* buffer) {
 
 	for(int i = 0; i<PGSIZE; i = i+2) {
 
-		long indexLocation = findOpenSector();
+		int indexLocation = findOpenSector();
 
 		if(indexLocation == -1) return -1;
 
@@ -826,7 +828,7 @@ int allocateIndices(char* buffer) {
 		buffer[i] = indexLocation & 0xFF;
 
 	}
-
+	return 0;
 }
 
 /**
@@ -883,7 +885,7 @@ int findDataBlockSector(int logicalBlock, int topIndexSector) {
 	int lowIndexSector = (lowIndexMsb << 8) + lowIndexLsb;
 
 	if(isUnwritten(diskContents[lowIndexSector])) {
-		int result = allocateIndices(diskContents[midIndexSector]);
+		int result = allocateIndices(diskContents[lowIndexSector]);
 
 		if(result == -1) {
 			aprintf("Not enough space to allocate for datablock.\n");
@@ -909,10 +911,10 @@ int findDataBlockSector(int logicalBlock, int topIndexSector) {
  * writeBuffer: the data to be written to the block.
  * Returns 0 if successful. Returns -1 if an error occurs.
  */
-int writeFile(int inode, int logicalBlock, char* writeBuffer) {
+int writeFile(long inode, int logicalBlock, char* writeBuffer) {
 
 	//means this inode isn't open.
-	if((int)QWalk(openFilesQueueId, inode) == -1) {
+	if((int)isOpen(inode) == -1) {
 		return -1;
 	}
 
@@ -921,7 +923,7 @@ int writeFile(int inode, int logicalBlock, char* writeBuffer) {
 		return -1;
 	}
 
-	OpenFile* file = QWalk(openFilesQueueId, inode);
+	OpenFile* file = isOpen(inode);
 	char* fileHeader = diskContents[file->sector];
 
 	int topIndexMsb = fileHeader[13];
@@ -946,10 +948,10 @@ int writeFile(int inode, int logicalBlock, char* writeBuffer) {
  * readBuffer: the buffer which will contain data read.
  * Returns 0 if successful and -1 if an error occurred.
  */
-int readFile(int inode, int logicalBlock, char* readBuffer) {
+int readFile(long inode, int logicalBlock, char* readBuffer) {
 
 	//means this inode isn't open.
-	if((int)QWalk(openFilesQueueId, inode) == -1) {
+	if((int)isOpen(inode) == -1) {
 		return -1;
 	}
 
@@ -958,7 +960,7 @@ int readFile(int inode, int logicalBlock, char* readBuffer) {
 		return -1;
 	}
 
-	OpenFile* file = QWalk(openFilesQueueId, inode);
+	OpenFile* file = isOpen(inode);
 	char* fileHeader = diskContents[file->sector];
 
 	int topIndexMsb = fileHeader[13];
@@ -973,14 +975,37 @@ int readFile(int inode, int logicalBlock, char* readBuffer) {
 }
 
 /**
+ * Checks if a file with a given inode is open.
+ * Parameters:
+ * inode: the inode of the file to check.
+ * Returns the address if the file is open, -1 otherwise.
+ */
+OpenFile* isOpen(int inode) {
+
+	int i = 0;
+	OpenFile* curr = QWalk(openFilesQueueId, i);
+
+	while((int)curr != -1) {
+
+		if(curr->inode == inode) return curr;
+
+		++i;
+		curr = QWalk(openFilesQueueId, i);
+	}
+
+	return (OpenFile*)-1;
+
+}
+
+/**
  * Closes a file.
  * Parameters:
  * inode: the inode of the file to close.
  * Returns 0 if successful or -1 if an error occurred.
  */
-int closeFile(int inode) {
+int closeFile(long inode) {
 
-	OpenFile* file = QWalk(openFilesQueueId, inode);
+	OpenFile* file = isOpen(inode);
 
 	if((int)file == -1) {
 		return -1;

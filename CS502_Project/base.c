@@ -567,10 +567,10 @@ void svc(SYSTEM_CALL_DATA *SystemCallData) {
     	case SYSNUM_OPEN_FILE: {
 
     		char* fileName = (char*)SystemCallData->Argument[0];
-    		int* inode = (int*)SystemCallData->Argument[1];
+    		long* inode = (long*)SystemCallData->Argument[1];
     		long* errorReturned = (long*)SystemCallData->Argument[2];
 
-    		int result = openFile(fileName);
+    		long result = openFile(fileName);
 
     		if(result == -1) {
     			*errorReturned = result;
@@ -584,7 +584,7 @@ void svc(SYSTEM_CALL_DATA *SystemCallData) {
 
     	case SYSNUM_WRITE_FILE: {
 
-    		int inode = (int)SystemCallData->Argument[0];
+    		long inode = (int)SystemCallData->Argument[0];
     		int logicalBlock = (int)SystemCallData->Argument[1];
     		char* writeBuffer = (char*)SystemCallData->Argument[2];
     		long* errorReturned = (long*)SystemCallData->Argument[3];
@@ -603,7 +603,7 @@ void svc(SYSTEM_CALL_DATA *SystemCallData) {
 
     	case SYSNUM_CLOSE_FILE: {
 
-    		int inode = (int)SystemCallData->Argument[0];
+    		long inode = (int)SystemCallData->Argument[0];
     		long* errorReturned = (long*)SystemCallData->Argument[1];
 
     		int result = closeFile(inode);
@@ -619,7 +619,7 @@ void svc(SYSTEM_CALL_DATA *SystemCallData) {
 
     	case SYSNUM_READ_FILE: {
 
-    		int inode = (int)SystemCallData->Argument[0];
+    		long inode = (int)SystemCallData->Argument[0];
 			int logicalBlock = (int)SystemCallData->Argument[1];
 			char* readBuffer = (char*)SystemCallData->Argument[2];
 			long* errorReturned = (long*)SystemCallData->Argument[3];
@@ -807,6 +807,11 @@ void osInit(int argc, char *argv[]) {
     } else if((argc > 1) && (strcmp(argv[1], "test22") == 0)) {
 
     	long address = (long)test22;
+    	pcbInit(address, (long)PageTable);
+
+    } else if((argc > 1) && (strcmp(argv[1], "test23") == 0)) {
+
+    	long address = (long)test23;
     	pcbInit(address, (long)PageTable);
 
     }
