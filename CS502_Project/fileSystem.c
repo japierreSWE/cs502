@@ -933,6 +933,16 @@ int writeFile(long inode, int logicalBlock, char* writeBuffer) {
 
 	int dataBlockSector = findDataBlockSector(logicalBlock, topIndexSector);
 
+	//increase the file size.
+	int fileSizeMsb = fileHeader[15];
+	int fileSizeLsb = fileHeader[14];
+	int fileSize = (fileSizeMsb << 8) + fileSizeLsb;
+
+	++fileSize;
+
+	fileHeader[15] = (fileSize >> 8) & 0xFF;
+	fileHeader[14] = fileSize & 0xFF;
+
 	bufferCopy(writeBuffer, diskContents[dataBlockSector]);
 	writeToDisk(currentProcess()->currentDisk, dataBlockSector, writeBuffer);
 
@@ -1014,5 +1024,16 @@ int closeFile(long inode) {
 		flushDiskContents();
 		return 0;
 	}
+
+}
+
+/**
+ * Prints the contents of the
+ * current directory and information
+ * about those files.
+ */
+void dirContents() {
+
+
 
 }
