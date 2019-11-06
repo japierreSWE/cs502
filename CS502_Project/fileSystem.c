@@ -25,15 +25,16 @@ typedef struct {
 
 } OpenFile;
 
-void bufferCopy(char* src, char* dest);
+void bufferCopy(unsigned char* src, unsigned char* dest);
 void initDiskContents();
-int isUnwritten(char* buffer);
-int isDir(char* buffer);
+int isUnwritten(unsigned char* buffer);
+int isDir(unsigned char* buffer);
 long findOpenSector();
 int findUnwrittenIndex();
-void insertName(char* fileName, char* buffer);
-int hasName(char* buffer, char* fileName);
+void insertName(char* fileName, unsigned char* buffer);
+int hasName(unsigned char* buffer, char* fileName);
 OpenFile* isOpen(int inode);
+char* getName(unsigned char* buffer);
 
 int rootSector = 0x11; //the sectors of the root directory and bitmap.
 int bitmapSector = 0x01;
@@ -41,7 +42,7 @@ int bitmapSize; //# of sectors the bitmap takes up.
 int currentInode = 0x01; //the next inode we'll use for a file.
 int openFilesQueueId;
 
-char** diskContents; //the contents of the disk stored in memory.
+unsigned char** diskContents; //the contents of the disk stored in memory.
 
 /**
  * Formats a disk for it to be used
@@ -63,7 +64,7 @@ int formatDisk(int diskID) {
 	//TODO: put a lock on this queue.
 	openFilesQueueId = QCreate("openFilesQ");
 
-	char* sectorZeroBuffer = malloc(PGSIZE * sizeof(char));
+	unsigned char* sectorZeroBuffer = malloc(PGSIZE * sizeof(char));
 
 	sectorZeroBuffer[0] = 'Z';
 
@@ -102,22 +103,22 @@ int formatDisk(int diskID) {
 	sectorZeroBuffer[11] = 0x06;
 	sectorZeroBuffer[10] = 0x00;
 
-	writeToDisk(diskID, 0, sectorZeroBuffer);
+	writeToDisk(diskID, 0, (char*)sectorZeroBuffer);
 
 	bufferCopy(sectorZeroBuffer, diskContents[0]);
 
 	//we use this for all sectors other than the 0th one.
 	//write part of bitmap covering the swap space.
-	char* tempBuffer = malloc(PGSIZE * sizeof(char));
+	unsigned char* tempBuffer = malloc(PGSIZE * sizeof(char));
 
 	for(int i = 0; i<PGSIZE; i++) {
 		tempBuffer[i] = 0xFF;
 	}
 
-	writeToDisk(diskID, 0x0D, tempBuffer);
-	writeToDisk(diskID, 0x0E, tempBuffer);
-	writeToDisk(diskID, 0x0F, tempBuffer);
-	writeToDisk(diskID, 0x10, tempBuffer);
+	writeToDisk(diskID, 0x0D, (char*)tempBuffer);
+	writeToDisk(diskID, 0x0E, (char*)tempBuffer);
+	writeToDisk(diskID, 0x0F, (char*)tempBuffer);
+	writeToDisk(diskID, 0x10, (char*)tempBuffer);
 
 	bufferCopy(tempBuffer, diskContents[0x0D]);
 	bufferCopy(tempBuffer, diskContents[0x0E]);
@@ -131,7 +132,7 @@ int formatDisk(int diskID) {
 		tempBuffer[i] = 0x00;
 	}
 
-	writeToDisk(diskID, bitmapSector, tempBuffer);
+	writeToDisk(diskID, bitmapSector, (char*)tempBuffer);
 
 	bufferCopy(tempBuffer, diskContents[bitmapSector]);
 
@@ -171,7 +172,7 @@ int formatDisk(int diskID) {
 	tempBuffer[15] = 0x00;
 	tempBuffer[14] = 0x00;
 
-	writeToDisk(diskID, rootSector, tempBuffer);
+	writeToDisk(diskID, rootSector, (char*)tempBuffer);
 
 	bufferCopy(tempBuffer, diskContents[rootSector]);
 
@@ -193,7 +194,7 @@ int formatDisk(int diskID) {
 	tempBuffer[14] = 0x1A;
 	tempBuffer[15] = 0x00;
 
-	writeToDisk(diskID, 0x12, tempBuffer);
+	writeToDisk(diskID, 0x12, (char*)tempBuffer);
 
 	bufferCopy(tempBuffer, diskContents[0x12]);
 
@@ -211,7 +212,7 @@ int formatDisk(int diskID) {
  * Src and dest are buffers representing
  * disk sectors.
  */
-void bufferCopy(char* src, char* dest) {
+void bufferCopy(unsigned char* src, unsigned char* dest) {
 
 	for(int i = 0; i<PGSIZE; i++) {
 
@@ -258,13 +259,13 @@ void flushDiskContents() {
 	//in the bitmap.
 	for(int i = bitmapSector; i<bitmapSector+bitmapSize; i++) {
 
-		char* sector = diskContents[i];
+		unsigned char* sector = diskContents[i];
 
 		//if we haven't written to this part of the bitmap.
 		if(isUnwritten(sector)) {
 			return;
 		} else {
-			writeToDisk(currentProcess()->currentDisk, i, sector);
+			writeToDisk(currentProcess()->currentDisk, i, (char*)sector);
 		}
 
 		for(int j = 0; j<PGSIZE; j++) {
@@ -277,7 +278,7 @@ void flushDiskContents() {
 				//if we find a bit.
 				if(masked >> shiftAmount == 1) {
 
-					writeToDisk(currentProcess()->currentDisk, index, diskContents[index]);
+					writeToDisk(currentProcess()->currentDisk, index, (char*)diskContents[index]);
 
 				}
 
@@ -302,11 +303,11 @@ long findOpenSector() {
 
 	//TODO: put lock on bitmap.
 	long index = 0;
-	char* tempBuffer = malloc(PGSIZE * sizeof(char));
+	unsigned char* tempBuffer = malloc(PGSIZE * sizeof(char));
 
 	for(int i = bitmapSector; i<bitmapSector+bitmapSize; i++) {
 
-		char* sector = diskContents[i];
+		unsigned char* sector = diskContents[i];
 
 		//if we haven't written to this part of the bitmap.
 		if(isUnwritten(sector)) {
@@ -353,18 +354,18 @@ long findOpenSector() {
  */
 int findUnwrittenIndex() {
 
-	char* tempBuffer = malloc(PGSIZE * sizeof(char));
-	char* dirBuffer = malloc(PGSIZE * sizeof(char));
+	unsigned char* tempBuffer = malloc(PGSIZE * sizeof(char));
+	unsigned char* dirBuffer = malloc(PGSIZE * sizeof(char));
 	int sectorNumber;
 
-	char* currentDirectory = diskContents[currentProcess()->currentDirectorySector];
+	unsigned char* currentDirectory = diskContents[currentProcess()->currentDirectorySector];
 
 	int indexMsb = currentDirectory[13];
 	int indexLsb = currentDirectory[12];
 
 	int indexSector = (indexMsb << 8) + indexLsb;
 
-	char* indexSectorBuffer =diskContents[indexSector];
+	unsigned char* indexSectorBuffer =diskContents[indexSector];
 
 	for(int i = 0; i<PGSIZE; i=i+2) {
 
@@ -395,7 +396,7 @@ int findUnwrittenIndex() {
  * fileName: a file name < 8 characters long.
  * buffer: a character array to be used as a file header.
  */
-void insertName(char* fileName, char* buffer) {
+void insertName(char* fileName, unsigned char* buffer) {
 
 	int nameCursor = 1;
 
@@ -427,7 +428,7 @@ void insertName(char* fileName, char* buffer) {
  * Returns 1 if the name in buffer is equal to fileName
  * Returns 0 otherwise.
  */
-int hasName(char* buffer, char* fileName) {
+int hasName(unsigned char* buffer, char* fileName) {
 
 	for(int i = 0; fileName[i]!='\0'; i++) {
 
@@ -447,7 +448,7 @@ int hasName(char* buffer, char* fileName) {
  * Returns 1 if the buffer isn't written to.
  * Returns 0 otherwise.
  */
-int isUnwritten(char* buffer) {
+int isUnwritten(unsigned char* buffer) {
 
 	for(int i = 0; i<PGSIZE; i++) {
 
@@ -469,7 +470,7 @@ int isUnwritten(char* buffer) {
  * Returns 1 if the file header is a buffer.
  * Returns 0 otherwise.
  */
-int isDir(char* buffer) {
+int isDir(unsigned char* buffer) {
 	char description = buffer[11];
 
 	//directories have their 1st bit set.
@@ -510,10 +511,10 @@ int openDir(int diskID, char* directoryName) {
 
 	}
 
-	char* dirBuffer = malloc(PGSIZE * sizeof(char));
+	unsigned char* dirBuffer = malloc(PGSIZE * sizeof(char));
 
 	int currentSector = currentProcess()->currentDirectorySector;
-	char* tempBuffer = diskContents[currentSector];
+	unsigned char* tempBuffer = diskContents[currentSector];
 
 	int indexMsb = tempBuffer[13];
 	int indexLsb = tempBuffer[12];
@@ -584,8 +585,8 @@ int createDir(char* directoryName) {
 		return -1;
 	}
 
-	char* tempBuffer = malloc(PGSIZE * sizeof(char));
-	char* dirBuffer = malloc(PGSIZE * sizeof(char));
+	unsigned char* tempBuffer = malloc(PGSIZE * sizeof(char));
+	unsigned char* dirBuffer = malloc(PGSIZE * sizeof(char));
 
 	int sectorNumber = findUnwrittenIndex();
 
@@ -594,7 +595,7 @@ int createDir(char* directoryName) {
 		return -1;
 	}
 
-	char* currentDirectory = diskContents[currentProcess()->currentDirectorySector];
+	unsigned char* currentDirectory = diskContents[currentProcess()->currentDirectorySector];
 
 	int parentInode = currentDirectory[0];
 
@@ -609,11 +610,10 @@ int createDir(char* directoryName) {
 
 	//put time in the header.
 	long currTime = getTimeOfDay();
-	char* timeBytes = (char*)&currTime;
 
-	dirBuffer[10] = timeBytes[2];
-	dirBuffer[9] = timeBytes[1];
-	dirBuffer[8] = timeBytes[0];
+	dirBuffer[10] = currTime & 0xFF;
+	dirBuffer[9] = (currTime >> 8) & 0xFF;
+	dirBuffer[8] = (currTime >> 16) & 0xFF;
 
 	int fileDescription = 1;
 	fileDescription += (2 << 1);
@@ -666,8 +666,8 @@ int createFile(char* fileName) {
 		return -1;
 	}
 
-	char* tempBuffer = malloc(PGSIZE * sizeof(char));
-	char* fileBuffer = malloc(PGSIZE * sizeof(char));
+	unsigned char* tempBuffer = malloc(PGSIZE * sizeof(char));
+	unsigned char* fileBuffer = malloc(PGSIZE * sizeof(char));
 
 	int sectorNumber = findUnwrittenIndex();
 
@@ -676,7 +676,7 @@ int createFile(char* fileName) {
 		return -1;
 	}
 
-	char* currentDirectory = diskContents[currentProcess()->currentDirectorySector];
+	unsigned char* currentDirectory = diskContents[currentProcess()->currentDirectorySector];
 
 	int parentInode = currentDirectory[0];
 
@@ -691,11 +691,10 @@ int createFile(char* fileName) {
 
 	//put time in the header.
 	long currTime = getTimeOfDay();
-	char* timeBytes = (char*)&currTime;
 
-	fileBuffer[10] = timeBytes[2];
-	fileBuffer[9] = timeBytes[1];
-	fileBuffer[8] = timeBytes[0];
+	fileBuffer[10] = currTime & 0xFF;
+	fileBuffer[9] = (currTime >> 8) & 0xFF;
+	fileBuffer[8] = (currTime >> 16) & 0xFF;
 
 	int fileDescription = 0;
 	fileDescription += (3 << 1);
@@ -741,10 +740,10 @@ int createFile(char* fileName) {
  */
 int openFile(char* fileName) {
 
-	char* fileBuffer = 0;
+	unsigned char* fileBuffer = 0;
 
 	int currentSector = currentProcess()->currentDirectorySector;
-	char* tempBuffer = diskContents[currentSector];
+	unsigned char* tempBuffer = diskContents[currentSector];
 
 	int indexMsb = tempBuffer[13];
 	int indexLsb = tempBuffer[12];
@@ -816,7 +815,7 @@ int openFile(char* fileName) {
  * turn the buffer into an index sector.
  * Returns 0 if successful, returns -1 if an error occurred.
  */
-int allocateIndices(char* buffer) {
+int allocateIndices(unsigned char* buffer) {
 
 	for(int i = 0; i<PGSIZE; i = i+2) {
 
@@ -843,7 +842,7 @@ int allocateIndices(char* buffer) {
 int findDataBlockSector(int logicalBlock, int topIndexSector) {
 
 	//we start at the top index.
-	char* tempBuffer = diskContents[topIndexSector];
+	unsigned char* tempBuffer = diskContents[topIndexSector];
 
 	//this will be used to calculate where to put the data block.
 	int num = logicalBlock;
@@ -924,7 +923,7 @@ int writeFile(long inode, int logicalBlock, char* writeBuffer) {
 	}
 
 	OpenFile* file = isOpen(inode);
-	char* fileHeader = diskContents[file->sector];
+	unsigned char* fileHeader = diskContents[file->sector];
 
 	int topIndexMsb = fileHeader[13];
 	int topIndexLsb = fileHeader[12];
@@ -943,7 +942,7 @@ int writeFile(long inode, int logicalBlock, char* writeBuffer) {
 	fileHeader[15] = (fileSize >> 8) & 0xFF;
 	fileHeader[14] = fileSize & 0xFF;
 
-	bufferCopy(writeBuffer, diskContents[dataBlockSector]);
+	bufferCopy((unsigned char*)writeBuffer, diskContents[dataBlockSector]);
 	writeToDisk(currentProcess()->currentDisk, dataBlockSector, writeBuffer);
 
 	return 0;
@@ -971,7 +970,7 @@ int readFile(long inode, int logicalBlock, char* readBuffer) {
 	}
 
 	OpenFile* file = isOpen(inode);
-	char* fileHeader = diskContents[file->sector];
+	unsigned char* fileHeader = diskContents[file->sector];
 
 	int topIndexMsb = fileHeader[13];
 	int topIndexLsb = fileHeader[12];
@@ -1028,12 +1027,86 @@ int closeFile(long inode) {
 }
 
 /**
+ * Retrieves the name of a file from a file header.
+ * Parameters:
+ * buffer: a character buffer representing a file header
+ * Returns the name of the file
+ */
+char* getName(unsigned char* buffer) {
+
+	char* result = malloc(sizeof(char) * 8);
+	int cursor = 0;
+
+	for(int i = 1; i<8; i++) {
+		result[cursor] = buffer[i];
+		++cursor;
+	}
+
+	//ensure there is a terminator.
+	result[cursor] = '\0';
+	return result;
+}
+
+/**
  * Prints the contents of the
  * current directory and information
  * about those files.
  */
 void dirContents() {
 
+	int currentSector = currentProcess()->currentDirectorySector;
+	unsigned char* tempBuffer = diskContents[currentSector];
+
+	char* currentDirectoryName = getName(tempBuffer);
+
+	int indexMsb = tempBuffer[13];
+	int indexLsb = tempBuffer[12];
+
+	int indexSector = (indexMsb << 8) + indexLsb;
+
+	tempBuffer = diskContents[indexSector];
+
+	aprintf("Contents of Directory %s:\n", currentDirectoryName);
+	aprintf("Inode,\tFilename,\tD/F,\tCreation Time,\tFile Size\n");
+
+	for(int i = 0; i<PGSIZE; i = i+2) {
+
+		indexMsb = tempBuffer[i+1];
+		indexLsb = tempBuffer[i];
+
+		int fileSector = (indexMsb << 8) + indexLsb;
+
+		if(isUnwritten(diskContents[fileSector])) {
+			break;
+		}
+
+		unsigned char* fileHeader = diskContents[fileSector];
+		char* name = getName(fileHeader);
+
+		int inode = fileHeader[0];
+		long creationTime = fileHeader[10] + (fileHeader[9] << 8) + (fileHeader[8] << 16);
+		int fileSize = fileHeader[14] + (fileHeader[15] << 8);
+
+		aprintf("%d\t", inode);
+		aprintf("%s\t\t", name);
+
+		if(isDir(fileHeader)) {
+			aprintf("D\t");
+		} else {
+			aprintf("F\t");
+		}
+
+		aprintf("%ld\t\t", creationTime);
+
+		if(isDir(fileHeader)) {
+			aprintf("--");
+		} else {
+			aprintf("%d", fileSize);
+		}
+
+		aprintf("\n");
+
+	}
 
 
 }

@@ -636,6 +636,14 @@ void svc(SYSTEM_CALL_DATA *SystemCallData) {
 
     	}
 
+    	case SYSNUM_DIR_CONTENTS: {
+    		long* errorReturned = (long*)SystemCallData->Argument[0];
+    		dirContents();
+
+    		*errorReturned = ERR_SUCCESS;
+    		break;
+    	}
+
     }
 
 }                                               // End of svc
@@ -812,6 +820,11 @@ void osInit(int argc, char *argv[]) {
     } else if((argc > 1) && (strcmp(argv[1], "test23") == 0)) {
 
     	long address = (long)test23;
+    	pcbInit(address, (long)PageTable);
+
+    } else if((argc > 1) && (strcmp(argv[1], "test24") == 0)) {
+
+    	long address = (long)test24;
     	pcbInit(address, (long)PageTable);
 
     }

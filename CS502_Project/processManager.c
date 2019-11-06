@@ -345,6 +345,7 @@ long createProcess(char* processName, void* startingAddress, long initialPriorit
 		exit(0);
 	}
 
+	process->currentDirectorySector = -1;
 	process->contextId = mmio.Field1;
 
 	storeProcess(process);

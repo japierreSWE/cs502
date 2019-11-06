@@ -20,6 +20,7 @@ int openFile(char* fileName);
 int writeFile(long inode, int logicalBlock, char* writeBuffer);
 int closeFile(long inode);
 int readFile(long inode, int logicalBlock, char* readBuffer);
+void dirContents();
 
 int formattedDisk;
 
