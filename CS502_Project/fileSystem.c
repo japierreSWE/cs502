@@ -311,6 +311,9 @@ long findOpenSector() {
 
 		//if we haven't written to this part of the bitmap.
 		if(isUnwritten(sector)) {
+			sector[0] = sector[0] | (1 << 7);
+			bufferCopy(sector, diskContents[i]);
+			free(tempBuffer);
 			return index;
 		}
 
@@ -854,8 +857,8 @@ int findDataBlockSector(int logicalBlock, int topIndexSector) {
 		++subtractionsBy64;
 	}
 
-	int midIndexMsb = tempBuffer[subtractionsBy64 + 1];
-	int midIndexLsb = tempBuffer[subtractionsBy64];
+	int midIndexMsb = tempBuffer[2*subtractionsBy64 + 1];
+	int midIndexLsb = tempBuffer[2*subtractionsBy64];
 
 	int midIndexSector = (midIndexMsb << 8) + midIndexLsb;
 
@@ -878,8 +881,8 @@ int findDataBlockSector(int logicalBlock, int topIndexSector) {
 		++subtractionsBy8;
 	}
 
-	int lowIndexMsb = tempBuffer[subtractionsBy8 + 1];
-	int lowIndexLsb = tempBuffer[subtractionsBy8];
+	int lowIndexMsb = tempBuffer[2*subtractionsBy8 + 1];
+	int lowIndexLsb = tempBuffer[2*subtractionsBy8];
 
 	int lowIndexSector = (lowIndexMsb << 8) + lowIndexLsb;
 
