@@ -25,6 +25,7 @@
 #define					 READY_LOCK 				 MEMORY_INTERLOCK_BASE+4
 #define					 PROCESS_LOCK 				 MEMORY_INTERLOCK_BASE+5
 #define					 MSG_SUSPEND_LOCK 			 MEMORY_INTERLOCK_BASE+6
+#define					 DISK_CONTENTS_LOCK			 MEMORY_INTERLOCK_BASE+7
 
 
 Message* findMessage();
@@ -169,7 +170,25 @@ void readyUnlock() {
 	READ_MODIFY(READY_LOCK,DO_UNLOCK,SUSPEND_UNTIL_LOCKED,&lockResult);
 }
 
+/**
+ * Performs a hardware interlock for disk contents
+ * buffers. It attempts to lock, suspending until
+ * this thread holds the lock.
+ */
+void diskContentsLock() {
+	INT32 lockResult;
+	READ_MODIFY(DISK_CONTENTS_LOCK,DO_LOCK,SUSPEND_UNTIL_LOCKED,&lockResult);
+}
 
+/**
+ * Performs a hardware interlock for disk contents
+ * buffers. It attempts to unlock, suspending until
+ * this thread holds the lock.
+ */
+void diskContentsUnlock() {
+	INT32 lockResult;
+	READ_MODIFY(DISK_CONTENTS_LOCK,DO_UNLOCK,SUSPEND_UNTIL_LOCKED,&lockResult);
+}
 
 /**
  * Retrieves the hardware time and
@@ -332,7 +351,9 @@ long sendMessage(long targetPID, char* messageBuffer, long msgSendLength) {
 		msgSuspendUnlock();
 
 	}
+	msgSuspendLock();
 	++numMessages;
+	msgSuspendUnlock();
 	return 0;
 
 }

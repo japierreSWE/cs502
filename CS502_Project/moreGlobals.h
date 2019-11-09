@@ -91,6 +91,8 @@ void processLock();
 void processUnlock();
 void msgSuspendLock();
 void msgSuspendUnlock();
+void diskContentsLock();
+void diskContentsUnlock();
 void readyLock();
 void readyUnlock();
 long getTimeOfDay();

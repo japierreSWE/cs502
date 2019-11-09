@@ -299,7 +299,9 @@ long terminateProcess(long pid) {
 			QRemoveItem(suspendQueueId, process);
 			suspendUnlock();
 
+			processLock();
 			--numProcesses;
+			processUnlock();
 			return 0;
 		}
 

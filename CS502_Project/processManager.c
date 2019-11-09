@@ -286,9 +286,9 @@ void storeProcess(Process* process) {
 
 	//update number of processes and the next pid in the sequence.
 	++currPidNumber;
-	++numProcesses;
 
 	processLock();
+	++numProcesses;
 	QInsertOnTail(processQueueID,process);
 	processUnlock();
 }
