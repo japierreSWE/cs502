@@ -95,6 +95,8 @@ void diskContentsLock();
 void diskContentsUnlock();
 void readyLock();
 void readyUnlock();
+void openFilesLock();
+void openFilesUnlock();
 long getTimeOfDay();
 void createTimerQueue();
 int addToTimerQueue(TimerRequest* request);

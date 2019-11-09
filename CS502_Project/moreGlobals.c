@@ -26,7 +26,7 @@
 #define					 PROCESS_LOCK 				 MEMORY_INTERLOCK_BASE+5
 #define					 MSG_SUSPEND_LOCK 			 MEMORY_INTERLOCK_BASE+6
 #define					 DISK_CONTENTS_LOCK			 MEMORY_INTERLOCK_BASE+7
-
+#define					 OPEN_FILES_LOCK			 MEMORY_INTERLOCK_BASE+8
 
 Message* findMessage();
 
@@ -188,6 +188,26 @@ void diskContentsLock() {
 void diskContentsUnlock() {
 	INT32 lockResult;
 	READ_MODIFY(DISK_CONTENTS_LOCK,DO_UNLOCK,SUSPEND_UNTIL_LOCKED,&lockResult);
+}
+
+/**
+ * Performs a hardware interlock for open files
+ * queue. It attempts to lock, suspending until
+ * this thread holds the lock.
+ */
+void openFilesLock() {
+	INT32 lockResult;
+	READ_MODIFY(OPEN_FILES_LOCK,DO_LOCK,SUSPEND_UNTIL_LOCKED,&lockResult);
+}
+
+/**
+ * Performs a hardware interlock for open files
+ * queue. It attempts to unlock, suspending until
+ * this thread holds the lock.
+ */
+void openFilesUnlock() {
+	INT32 lockResult;
+	READ_MODIFY(OPEN_FILES_LOCK,DO_UNLOCK,SUSPEND_UNTIL_LOCKED,&lockResult);
 }
 
 /**

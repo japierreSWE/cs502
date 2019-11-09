@@ -253,6 +253,7 @@ void initDiskContents() {
  */
 void flushDiskContents() {
 
+	//diskContentsLock();
 	long index = 0;
 	//update the bitmap and all
 	//sectors that have been indicated
@@ -289,7 +290,7 @@ void flushDiskContents() {
 		}
 
 	}
-
+	//diskContentsUnlock();
 }
 
 /*
@@ -548,10 +549,6 @@ int openDir(int diskID, char* directoryName) {
 		}
 
 
-		//which would mean we're at the end.
-		//TODO: at the moment, disks have no
-		//further index levels. we will change how this case
-		//works should that change in the future.
 		if(cursor == 14) {
 
 			aprintf("Ran out of space for dirs on open.\n");
@@ -626,6 +623,7 @@ int createDir(char* directoryName) {
 
 	//find the index sector for the new dir, and put its
 	//msb and lsb in the buffer.
+	diskContentsLock();
 	long newDirIndex = findOpenSector();
 	dirBuffer[13] = (newDirIndex >> 8) & 0xFF;
 	dirBuffer[12] = newDirIndex & 0xFF;
@@ -646,6 +644,7 @@ int createDir(char* directoryName) {
 
 	//write file index.
 	bufferCopy(dirBuffer, diskContents[newDirIndex]);
+	diskContentsUnlock();
 	free(tempBuffer);
 	free(dirBuffer);
 	return 0;
@@ -707,6 +706,7 @@ int createFile(char* fileName) {
 
 	//find the index sector for the new dir, and put its
 	//msb and lsb in the buffer.
+	diskContentsLock();
 	long newFileIndex = findOpenSector();
 	fileBuffer[13] = (newFileIndex >> 8) & 0xFF;
 	fileBuffer[12] = newFileIndex & 0xFF;
@@ -727,6 +727,7 @@ int createFile(char* fileName) {
 
 	//write file index.
 	bufferCopy(fileBuffer, diskContents[newFileIndex]);
+	diskContentsUnlock();
 	free(tempBuffer);
 	free(fileBuffer);
 	return 0;
@@ -777,10 +778,6 @@ int openFile(char* fileName) {
 		}
 
 
-		//which would mean we're at the end.
-		//TODO: at the moment, dirs have no
-		//further index levels. we will change how this case
-		//works should that change in the future.
 		if(cursor == 14) {
 
 			aprintf("Ran out of space for files.\n");
@@ -797,7 +794,10 @@ int openFile(char* fileName) {
 			OpenFile* file = malloc(sizeof(OpenFile));
 			file->inode = fileBuffer[0];
 			file->sector = indexSector;
+
+			openFilesLock();
 			QInsert(openFilesQueueId, fileBuffer[0], file);
+			openFilesUnlock();
 
 
 			return fileBuffer[0];
@@ -933,7 +933,9 @@ int writeFile(long inode, int logicalBlock, char* writeBuffer) {
 
 	int topIndexSector = (topIndexMsb << 8) + topIndexLsb;
 
+	diskContentsLock();
 	int dataBlockSector = findDataBlockSector(logicalBlock, topIndexSector);
+	diskContentsUnlock();
 
 	//increase the file size.
 	int fileSizeMsb = fileHeader[15];
@@ -980,7 +982,9 @@ int readFile(long inode, int logicalBlock, char* readBuffer) {
 
 	int topIndexSector = (topIndexMsb << 8) + topIndexLsb;
 
+	diskContentsLock();
 	int dataBlockSector = findDataBlockSector(logicalBlock, topIndexSector);
+	diskContentsUnlock();
 
 	readFromDisk(currentProcess()->currentDisk, dataBlockSector, readBuffer);
 	return 0;
@@ -994,17 +998,22 @@ int readFile(long inode, int logicalBlock, char* readBuffer) {
  */
 OpenFile* isOpen(int inode) {
 
+	openFilesLock();
 	int i = 0;
 	OpenFile* curr = QWalk(openFilesQueueId, i);
 
 	while((int)curr != -1) {
 
-		if(curr->inode == inode) return curr;
+		if(curr->inode == inode) {
+			openFilesUnlock();
+			return curr;
+		}
 
 		++i;
 		curr = QWalk(openFilesQueueId, i);
 	}
 
+	openFilesUnlock();
 	return (OpenFile*)-1;
 
 }
@@ -1022,7 +1031,9 @@ int closeFile(long inode) {
 	if((int)file == -1) {
 		return -1;
 	} else {
+		openFilesLock();
 		QRemoveItem(openFilesQueueId, file);
+		openFilesUnlock();
 		flushDiskContents();
 		return 0;
 	}

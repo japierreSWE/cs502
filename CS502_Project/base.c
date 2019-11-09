@@ -385,7 +385,9 @@ void svc(SYSTEM_CALL_DATA *SystemCallData) {
 
     	case SYSNUM_CHECK_DISK: {
     		long diskID = (long)SystemCallData->Argument[0];
+    		long* errorReturned = (long*)SystemCallData->Argument[1];
     		checkDisk(diskID);
+    		*errorReturned = ERR_SUCCESS;
     		break;
     	}
 
@@ -830,6 +832,11 @@ void osInit(int argc, char *argv[]) {
     } else if((argc > 1) && (strcmp(argv[1], "test25") == 0)) {
 
     	long address = (long)test25;
+    	pcbInit(address, (long)PageTable);
+
+    } else if((argc > 1) && (strcmp(argv[1], "test26") == 0)) {
+
+    	long address = (long)test26;
     	pcbInit(address, (long)PageTable);
 
     }
