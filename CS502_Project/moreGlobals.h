@@ -76,6 +76,7 @@ int messageQueueID; //queue containing messages.
 int msgSuspendQueueID; //queue containing processes waiting for a message.
 
 int numMessages; //number of messages in the queue.
+int numProcessors;
 
 int interruptPrints;
 
@@ -105,5 +106,6 @@ void initMessageQueue();
 void initMsgSuspendQueue();
 long sendMessage(long targetPID, char* messageBuffer, long msgSendLength);
 long receiveMessage(long sourcePID, char* receiveBuffer, long receiveLength, long* sendLength, long* senderPid);
+void getNumProcessors();
 
 #endif /* MOREGLOBALS_H_ */

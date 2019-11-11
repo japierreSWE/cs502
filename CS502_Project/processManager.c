@@ -56,6 +56,7 @@ void pcbInit(long address, long pageTable) {
 	initSuspendQueue();
 	initMessageQueue();
 	initMsgSuspendQueue();
+	getNumProcessors();
 	createInitialProcess(address, pageTable);
 
 }

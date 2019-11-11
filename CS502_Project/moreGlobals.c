@@ -226,6 +226,22 @@ long getTimeOfDay() {
 }
 
 /**
+ * Obtains and stores the number
+ * of processors in the simulation.
+ */
+void getNumProcessors() {
+	MEMORY_MAPPED_IO mmio;
+	mmio.Mode = Z502GetProcessorNumber;
+	mmio.Field1 = 0;
+	mmio.Field2 = 0;
+	mmio.Field3 = 0;
+	mmio.Field4 = 0;
+	MEM_READ(Z502Processor, &mmio);
+
+	numProcessors = mmio.Field1;
+}
+
+/**
  * Creates the timer queue and stores its ID.
  */
 void createTimerQueue() {
