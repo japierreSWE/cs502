@@ -20,6 +20,7 @@
 void schedulePrint();
 int inReadyQueue(long pid);
 int inSuspendQueue(long pid);
+void multiDispatch();
 
 int numSchedulePrints = 0;
 
@@ -45,6 +46,12 @@ void initSuspendQueue() {
  * are no ready processes.
  */
 void dispatch() {
+
+
+	if(numProcessors > 1) {
+		multiDispatch();
+		return;
+	}
 
 	//pass time if there are no ready processes.
 	while(readyQueueIsEmpty()) {
@@ -72,6 +79,81 @@ void dispatch() {
 	if(mmio.Field4 == ERR_BAD_PARAM) {
 		aprintf("Error starting another process from dispatch.\n");
 		exit(0);
+	}
+
+}
+
+/**
+ * Carries out multiprocessing dispatching
+ * for this current process. It should suspend
+ * until the dispatching process wakes it up,
+ * then schedule print.
+ */
+void multiDispatch() {
+
+	//suspend this current one.
+	MEMORY_MAPPED_IO mmio;
+	mmio.Mode = Z502StartContext;
+	mmio.Field1 = 0;
+	mmio.Field2 = SUSPEND_CURRENT_CONTEXT_ONLY;
+	mmio.Field3 = 0;
+	mmio.Field4 = 0;
+
+	MEM_WRITE(Z502Context, &mmio);
+
+	schedulePrint();
+}
+
+/**
+ * The code required to make the multidispatcher
+ * start running.
+ */
+void startMultidispatcher() {
+
+	SYSTEM_CALL_DATA *SystemCallData =
+		 (SYSTEM_CALL_DATA *)calloc(1, sizeof (SYSTEM_CALL_DATA));
+	SystemCallData->NumberOfArguments = 0;
+	SystemCallData->SystemCallNumber = SYSNUM_MULTIDISPATCH;
+	ChargeTimeAndCheckEvents( COST_OF_SOFTWARE_TRAP );
+	SoftwareTrap(SystemCallData);
+	free(SystemCallData);
+
+}
+
+/**
+ * This following code plays the role of the
+ * scheduler in a multiprocessor system.
+ * It starts all processes found in the ready
+ * queue then checks whether the current process
+ * can continue.
+ */
+void multidispatcher() {
+
+	while(1) {
+
+		while(!readyQueueIsEmpty()) {
+
+			readyLock();
+			Process* proc = QRemoveHead(readyQueueId);
+
+			MEMORY_MAPPED_IO mmio;
+			mmio.Mode = Z502StartContext;
+			mmio.Field1 = proc->contextId;
+			mmio.Field2 = START_NEW_CONTEXT_ONLY;
+			mmio.Field3 = 0;
+			mmio.Field4 = 0;
+
+			MEM_WRITE(Z502Context, &mmio);
+
+			readyUnlock();
+
+			if(mmio.Field4 != ERR_SUCCESS) {
+				aprintf("Multidispatcher could not start process.\n");
+				exit(0);
+			}
+
+		}
+
 	}
 
 }

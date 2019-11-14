@@ -646,6 +646,10 @@ void svc(SYSTEM_CALL_DATA *SystemCallData) {
     		break;
     	}
 
+    	case SYSNUM_MULTIDISPATCH: {
+    		multidispatcher();
+    	}
+
     }
 
 }                                               // End of svc

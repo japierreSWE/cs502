@@ -14,6 +14,7 @@
 #define MOREGLOBALS_H_
 
 #define INTERRUPT_PRINTS_LIMIT 10
+#define SYSNUM_MULTIDISPATCH 50
 
 //Struct for a process.
 //pid: the process ID.

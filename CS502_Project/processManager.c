@@ -57,6 +57,26 @@ void pcbInit(long address, long pageTable) {
 	initMessageQueue();
 	initMsgSuspendQueue();
 	getNumProcessors();
+
+	//if this is multiprocessed,
+	//make the dispatcher.
+	if(numProcessors > 1) {
+
+		//initialize
+		MEMORY_MAPPED_IO mmio;
+		mmio.Mode = Z502InitializeContext;
+		mmio.Field1 = 0;
+		mmio.Field2 = (long)startMultidispatcher;
+		mmio.Field3 = (long)calloc(2, NUMBER_VIRTUAL_PAGES );
+		MEM_WRITE(Z502Context, &mmio);
+
+		//start it up in the background.
+		mmio.Mode = Z502StartContext;
+		mmio.Field2 = START_NEW_CONTEXT_ONLY;
+		MEM_WRITE(Z502Context, &mmio);
+
+	}
+
 	createInitialProcess(address, pageTable);
 
 }

@@ -22,5 +22,7 @@ void addToReadyQueue(Process* process);
 long terminateProcess(long pid);
 long suspendProcess(long pid);
 long resumeProcess(long pid);
+void multidispatcher();
+void startMultidispatcher();
 
 #endif /* DISPATCHER_H_ */
