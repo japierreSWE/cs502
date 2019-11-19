@@ -164,37 +164,16 @@ void InterruptHandler(void) {
     	} else if(DeviceID == DISK_INTERRUPT_DISK0 || DeviceID == DISK_INTERRUPT_DISK1 || DeviceID == 7
     			|| DeviceID == 8 || DeviceID == 9 || DeviceID == 10 || DeviceID == 11 || DeviceID == 12) {
 
-
+    		diskLock();
     		int diskID = DeviceID - 5;
 
-    		diskLock();
     		Process* proc = removeFromDiskQueue(diskID);
-    		diskUnlock();
 
-    		addToReadyQueue(proc);
-
-    		//wake up the rest of the processes that requested this disk.
-    		//some of them could be waiting because the disk was in use.
-    		diskLock();
-    		int i = 0;
-    		DiskRequest* req = (DiskRequest*)QWalk(diskQueueId, i);
-
-    		while((int)req != -1) {
-
-    			if(req->diskID == diskID) {
-
-
-    				QRemoveItem(diskQueueId, req);
-    				addToReadyQueue(req->process);
-    				i = -1;
-    			}
-
-    			++i;
-    			req = (DiskRequest*)QWalk(diskQueueId, i);
-
+    		while((int)proc != -1) {
+    			addToReadyQueue(proc);
+    			proc = removeFromDiskQueue(diskID);
     		}
     		diskUnlock();
-
 
     		if(Status != ERR_SUCCESS) {
 
@@ -648,6 +627,7 @@ void svc(SYSTEM_CALL_DATA *SystemCallData) {
 
     	case SYSNUM_MULTIDISPATCH: {
     		multidispatcher();
+    		break;
     	}
 
     }

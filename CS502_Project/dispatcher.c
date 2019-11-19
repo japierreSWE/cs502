@@ -131,26 +131,34 @@ void multidispatcher() {
 
 	while(1) {
 
-		while(!readyQueueIsEmpty()) {
+		if(!readyQueueIsEmpty()) {
 
-			readyLock();
-			Process* proc = QRemoveHead(readyQueueId);
+			while(!readyQueueIsEmpty()) {
 
-			MEMORY_MAPPED_IO mmio;
-			mmio.Mode = Z502StartContext;
-			mmio.Field1 = proc->contextId;
-			mmio.Field2 = START_NEW_CONTEXT_ONLY;
-			mmio.Field3 = 0;
-			mmio.Field4 = 0;
+				readyLock();
+				Process* proc = QRemoveHead(readyQueueId);
 
-			MEM_WRITE(Z502Context, &mmio);
+				MEMORY_MAPPED_IO mmio;
+				mmio.Mode = Z502StartContext;
+				mmio.Field1 = proc->contextId;
+				mmio.Field2 = START_NEW_CONTEXT_ONLY;
+				mmio.Field3 = 0;
+				mmio.Field4 = 0;
 
-			readyUnlock();
+				MEM_WRITE(Z502Context, &mmio);
 
-			if(mmio.Field4 != ERR_SUCCESS) {
-				aprintf("Multidispatcher could not start process.\n");
-				exit(0);
+				readyUnlock();
+
+				if(mmio.Field4 != ERR_SUCCESS) {
+					aprintf("Multidispatcher could not start process.\n");
+					exit(0);
+				}
+
 			}
+
+		} else {
+
+			CALL();
 
 		}
 

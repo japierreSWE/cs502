@@ -38,9 +38,7 @@ void addToDiskQueue(long diskID) {
 	req->diskID = diskID;
 	req->process = currentProcess();
 
-	diskLock();
 	QInsertOnTail(diskQueueId, req);
-	diskUnlock();
 
 }
 
@@ -54,7 +52,6 @@ void addToDiskQueue(long diskID) {
  */
 Process* removeFromDiskQueue(long diskID) {
 
-	diskLock();
 	int i = 0;
 	DiskRequest* req = QWalk(diskQueueId, i);
 
@@ -66,7 +63,6 @@ Process* removeFromDiskQueue(long diskID) {
 		if(req->diskID == diskID) {
 
 			QRemoveItem(diskQueueId, req);
-			diskUnlock();
 			return req->process;
 		}
 
@@ -74,7 +70,6 @@ Process* removeFromDiskQueue(long diskID) {
 		req = QWalk(diskQueueId, i);
 
 	}
-	diskUnlock();
 
 	return (Process*)-1;
 
@@ -89,6 +84,7 @@ Process* removeFromDiskQueue(long diskID) {
  */
 void writeToDisk(long diskID, long sector, char* writeBuffer) {
 
+
 	//ask disk to write.
 	MEMORY_MAPPED_IO mmio;
 	mmio.Mode = Z502DiskWrite;
@@ -97,16 +93,43 @@ void writeToDisk(long diskID, long sector, char* writeBuffer) {
 	mmio.Field3 = (long)writeBuffer;
 
 	//if the disk is being used, wait.
-	while(getDiskStatus(diskID) == DEVICE_IN_USE) {
+	/*while(getDiskStatus(diskID) == DEVICE_IN_USE) {
 		addToDiskQueue(diskID);
+		diskUnlock();
 		dispatch();
 	}
 
+	diskUnlock();
+
+	diskLock();
 	MEM_WRITE(Z502Disk, &mmio);
 
 	//we have to wait for the disk to finish before we continue.
 	addToDiskQueue(diskID);
-	dispatch();
+	diskUnlock();
+	dispatch();*/
+
+	while(1) {
+
+		diskLock();
+
+		if(getDiskStatus(diskID) == DEVICE_IN_USE) {
+
+			addToDiskQueue(diskID);
+			diskUnlock();
+			dispatch();
+
+		} else {
+
+			MEM_WRITE(Z502Disk, &mmio);
+			addToDiskQueue(diskID);
+			diskUnlock();
+			dispatch();
+			break;
+
+		}
+
+	}
 
 }
 
@@ -128,16 +151,43 @@ int readFromDisk(long diskID, long sector, char* readBuffer) {
 	mmio.Field3 = (long)readBuffer;
 
 	//if the disk is being used, wait.
-	if(getDiskStatus(diskID) == DEVICE_IN_USE) {
+	/*while(getDiskStatus(diskID) == DEVICE_IN_USE) {
 		addToDiskQueue(diskID);
+		diskUnlock();
 		dispatch();
 	}
 
+	diskUnlock();
+
+	diskLock();
 	MEM_WRITE(Z502Disk, &mmio);
 
 	//we have to wait for the disk to finish before we continue.
 	addToDiskQueue(diskID);
-	dispatch();
+	diskUnlock();
+	dispatch();*/
+
+	while(1) {
+
+		diskLock();
+
+		if(getDiskStatus(diskID) == DEVICE_IN_USE) {
+
+			addToDiskQueue(diskID);
+			diskUnlock();
+			dispatch();
+
+		} else {
+
+			MEM_WRITE(Z502Disk, &mmio);
+			addToDiskQueue(diskID);
+			diskUnlock();
+			dispatch();
+			break;
+
+		}
+
+	}
 
 	if(mmio.Field4 == ERR_BAD_PARAM) {
 		return -2;

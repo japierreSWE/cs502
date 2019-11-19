@@ -331,21 +331,26 @@ long sendMessage(long targetPID, char* messageBuffer, long msgSendLength) {
 	Process* sender = currentProcess();
 
 	//OS must restrict the number of messages present.
+	msgLock();
 	if(numMessages >= 20) {
+		msgUnlock();
 		return -1;
 	}
 
 	//pid must exist.
 	if((int)target == -1 && targetPID != -1) {
+		msgUnlock();
 		return -1;
 	}
 
 	if(msgSendLength >= 1000) {
+		msgUnlock();
 		return -1;
 	}
 
 	//send length can't be less than buffer size
 	if(msgSendLength < strlen(messageBuffer) + 1) {
+		msgUnlock();
 		return -1;
 	}
 
@@ -356,9 +361,7 @@ long sendMessage(long targetPID, char* messageBuffer, long msgSendLength) {
 	msg->messageContent = malloc(sizeof(char) * msgSendLength);
 	strcpy(msg->messageContent, messageBuffer);
 
-	msgLock();
 	QInsertOnTail(messageQueueID, msg);
-	msgUnlock();
 
 	//if this is a broadcast, wake up all processes.
 	//otherwise, only wake up the one we sent it to.
@@ -387,9 +390,8 @@ long sendMessage(long targetPID, char* messageBuffer, long msgSendLength) {
 		msgSuspendUnlock();
 
 	}
-	msgSuspendLock();
 	++numMessages;
-	msgSuspendUnlock();
+	msgUnlock();
 	return 0;
 
 }
@@ -406,7 +408,6 @@ Message* findMessage(long sourcePid) {
 
 	Process* current = currentProcess();
 
-	msgLock();
 	int i = 0;
 	Message* msg = QWalk(messageQueueID, i);
 
@@ -420,7 +421,6 @@ Message* findMessage(long sourcePid) {
 				|| (msg->to == current->pid && sourcePid == -1)
 				|| (sourcePid == -1 && msg->to == -1 && msg->from != current->pid)) {
 
-			msgUnlock();
 			return msg;
 
 		}
@@ -428,7 +428,6 @@ Message* findMessage(long sourcePid) {
 		++i;
 		msg = QWalk(messageQueueID, i);
 	}
-	msgUnlock();
 
 	return (Message*)-1;
 
@@ -446,6 +445,7 @@ Message* findMessage(long sourcePid) {
  */
 long receiveMessage(long sourcePID, char* receiveBuffer, long receiveLength, long* sendLength, long* senderPid) {
 
+	msgLock();
 	Message* msg = findMessage(sourcePID);
 	Process* target = getProcess(sourcePID);
 
@@ -467,7 +467,10 @@ long receiveMessage(long sourcePID, char* receiveBuffer, long receiveLength, lon
 		QInsertOnTail(msgSuspendQueueID, current);
 		msgSuspendUnlock();
 
+		msgUnlock();
 		dispatch();
+
+		msgLock();
 		msg = findMessage(sourcePID);
 
 	}
@@ -475,6 +478,7 @@ long receiveMessage(long sourcePID, char* receiveBuffer, long receiveLength, lon
 	//must have right buffer size.
 	if(receiveLength < strlen(msg->messageContent) + 1) {
 
+		msgUnlock();
 		return -1;
 
 	}
@@ -485,7 +489,6 @@ long receiveMessage(long sourcePID, char* receiveBuffer, long receiveLength, lon
 	*sendLength = msg->messageLength;
 	*senderPid = msg->from;
 
-	msgLock();
 	QRemoveItem(messageQueueID, msg);
 	--numMessages;
 	msgUnlock();
