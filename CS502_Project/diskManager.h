@@ -12,11 +12,11 @@
 
 void initDiskManager();
 void writeToDisk(long diskID, long sector, char* writeBuffer);
-int readFromDisk(long diskID, long sector, char* readBuffer);
+void readFromDisk(long diskID, long sector, char* readBuffer);
 void checkDisk(long diskID);
 long getDiskStatus(long diskID);
-void addToDiskQueue(long diskID);
-Process* removeFromDiskQueue(long diskID);
+void addToDiskQueue(long diskID, int currentlyUsing);
+Process* removeFromDiskQueue(long diskID, int ignoreCurrentlyUsing);
 
 int diskQueueId;
 #endif /* DISKMANAGER_H_ */

@@ -66,6 +66,7 @@ typedef struct Message Message;
 struct DiskRequest {
 	long diskID;
 	Process* process;
+	int currentlyUsing;
 };
 
 typedef struct DiskRequest DiskRequest;

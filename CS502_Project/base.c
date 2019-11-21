@@ -65,7 +65,7 @@ char *call_names[] = {"MemRead  ", "MemWrite ", "ReadMod  ", "GetTime  ",
          YOU MUST READ THE ERROR STATUS ON THE INTERRUPT
  ************************************************************************/
 void InterruptHandler(void) {
-    INT32 DeviceID;
+	INT32 DeviceID;
     INT32 Status;
     int interruptsFound = 0;
 
@@ -164,14 +164,19 @@ void InterruptHandler(void) {
     	} else if(DeviceID == DISK_INTERRUPT_DISK0 || DeviceID == DISK_INTERRUPT_DISK1 || DeviceID == 7
     			|| DeviceID == 8 || DeviceID == 9 || DeviceID == 10 || DeviceID == 11 || DeviceID == 12) {
 
-    		diskLock();
     		int diskID = DeviceID - 5;
 
-    		Process* proc = removeFromDiskQueue(diskID);
+    		diskLock();
+    		//aprintf("Disk interrupt starting.\n");
 
+    		//get the 1st currently using one.
+    		Process* proc = removeFromDiskQueue(diskID, 0);
+
+    		//get the other ones, ignoring ones currently using disk.
     		while((int)proc != -1) {
+    			//aprintf("INTERRUPT: Making process %d ready.\n", proc->pid);
     			addToReadyQueue(proc);
-    			proc = removeFromDiskQueue(diskID);
+    			proc = removeFromDiskQueue(diskID, 1);
     		}
     		diskUnlock();
 
@@ -217,7 +222,7 @@ void InterruptHandler(void) {
 			aprintf("InterruptHandler: Found device ID %d with status %d\n",
 					DeviceID, Status);
 		}*/
-
+    	mmio.Mode = Z502GetInterruptInfo;
     	mmio.Field1 = mmio.Field2 = mmio.Field3 = mmio.Field4 = 0;
     	MEM_READ(Z502InterruptDevice, &mmio);
 

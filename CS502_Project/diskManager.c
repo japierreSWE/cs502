@@ -31,12 +31,14 @@ void initDiskManager() {
  * the disk queue, requesting the given diskID
  * Parameters:
  * diskID: the diskID requested by the currently running process.
+ * currentlyUsing: whether the process is currently using disk.
  */
-void addToDiskQueue(long diskID) {
+void addToDiskQueue(long diskID, int currentlyUsing) {
 
 	DiskRequest* req = malloc(sizeof(DiskRequest));
 	req->diskID = diskID;
 	req->process = currentProcess();
+	req->currentlyUsing = currentlyUsing;
 
 	QInsertOnTail(diskQueueId, req);
 
@@ -47,10 +49,11 @@ void addToDiskQueue(long diskID) {
  * disk request that requested the given diskID.
  * Parameters:
  * diskID: the diskID that was requested
+ * ignoreCurrentlyUsing: whether we should ignore processes using disk.
  * Returns: the first process found that requested that diskID,
  * or -1 if none found
  */
-Process* removeFromDiskQueue(long diskID) {
+Process* removeFromDiskQueue(long diskID, int ignoreCurrentlyUsing) {
 
 	int i = 0;
 	DiskRequest* req = QWalk(diskQueueId, i);
@@ -62,8 +65,20 @@ Process* removeFromDiskQueue(long diskID) {
 
 		if(req->diskID == diskID) {
 
-			QRemoveItem(diskQueueId, req);
-			return req->process;
+			if(ignoreCurrentlyUsing) {
+
+				if(req->currentlyUsing != 1) {
+					QRemoveItem(diskQueueId, req);
+					return req->process;
+				}
+
+			} else {
+
+				QRemoveItem(diskQueueId, req);
+				return req->process;
+
+			}
+
 		}
 
 		++i;
@@ -115,14 +130,14 @@ void writeToDisk(long diskID, long sector, char* writeBuffer) {
 
 		if(getDiskStatus(diskID) == DEVICE_IN_USE) {
 
-			addToDiskQueue(diskID);
+			addToDiskQueue(diskID, 0);
 			diskUnlock();
 			dispatch();
 
 		} else {
 
 			MEM_WRITE(Z502Disk, &mmio);
-			addToDiskQueue(diskID);
+			addToDiskQueue(diskID, 1);
 			diskUnlock();
 			dispatch();
 			break;
@@ -133,15 +148,31 @@ void writeToDisk(long diskID, long sector, char* writeBuffer) {
 
 }
 
+/*
+ * Whether 2 buffers are equal.
+ */
+int areEqual(char* buf1, char* buf2) {
+
+	for(int i = 0; i<PGSIZE; i++) {
+
+		if(buf1[i] != buf2[i]) {
+			return 0;
+		}
+
+	}
+
+	return 1;
+
+}
+
 /**
  * Reads from a disk with a given ID at a given sector.
  * Parameters:
  * diskID: the diskID to read from.
  * sector: the sector to read from.
  * readBuffer: the address to send the data to.
- * Returns 0 if successful. Returns -2 if disk wasn't written to yet.
  */
-int readFromDisk(long diskID, long sector, char* readBuffer) {
+void readFromDisk(long diskID, long sector, char* readBuffer) {
 
 	//ask for disk read.
 	MEMORY_MAPPED_IO mmio;
@@ -173,15 +204,19 @@ int readFromDisk(long diskID, long sector, char* readBuffer) {
 
 		if(getDiskStatus(diskID) == DEVICE_IN_USE) {
 
-			addToDiskQueue(diskID);
+			//aprintf("Process %d add from read: DISK IN USE.\n", currentProcess()->pid);
+			addToDiskQueue(diskID, 0);
 			diskUnlock();
+			//aprintf("Process %d dispatching: DISK IN USE.\n", currentProcess()->pid);
 			dispatch();
 
 		} else {
 
 			MEM_WRITE(Z502Disk, &mmio);
-			addToDiskQueue(diskID);
+			//aprintf("Process %d add from read: STARTED READ.\n", currentProcess()->pid);
+			addToDiskQueue(diskID, 1);
 			diskUnlock();
+			//aprintf("Process %d dispatching: STARTED READ.\n", currentProcess()->pid);
 			dispatch();
 			break;
 
@@ -189,9 +224,7 @@ int readFromDisk(long diskID, long sector, char* readBuffer) {
 
 	}
 
-	if(mmio.Field4 == ERR_BAD_PARAM) {
-		return -2;
-	} else return 0;
+	//while(areEqual(readBuffer, tempBuffer));
 
 }
 

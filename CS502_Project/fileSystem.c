@@ -25,7 +25,7 @@ typedef struct {
 
 } OpenFile;
 
-void bufferCopy(unsigned char* src, unsigned char* dest);
+
 void initDiskContents();
 int isUnwritten(unsigned char* buffer);
 int isDir(unsigned char* buffer);

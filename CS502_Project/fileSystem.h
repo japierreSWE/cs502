@@ -21,6 +21,7 @@ int writeFile(long inode, int logicalBlock, char* writeBuffer);
 int closeFile(long inode);
 int readFile(long inode, int logicalBlock, char* readBuffer);
 void dirContents();
+void bufferCopy(unsigned char* src, unsigned char* dest);
 
 int formattedDisk;
 

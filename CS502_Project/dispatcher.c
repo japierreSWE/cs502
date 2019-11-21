@@ -99,6 +99,8 @@ void multiDispatch() {
 	mmio.Field3 = 0;
 	mmio.Field4 = 0;
 
+	//if((int)currentProcess() != -1)
+	//aprintf("Process %d about to dispatch suspend\n", currentProcess()->pid);
 	MEM_WRITE(Z502Context, &mmio);
 
 	schedulePrint();

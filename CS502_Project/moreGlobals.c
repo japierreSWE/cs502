@@ -27,6 +27,7 @@
 #define					 MSG_SUSPEND_LOCK 			 MEMORY_INTERLOCK_BASE+6
 #define					 DISK_CONTENTS_LOCK			 MEMORY_INTERLOCK_BASE+7
 #define					 OPEN_FILES_LOCK			 MEMORY_INTERLOCK_BASE+8
+#define					 MEM_LOCK					 MEMORY_INTERLOCK_BASE+9
 
 Message* findMessage();
 
@@ -209,6 +210,7 @@ void openFilesUnlock() {
 	INT32 lockResult;
 	READ_MODIFY(OPEN_FILES_LOCK,DO_UNLOCK,SUSPEND_UNTIL_LOCKED,&lockResult);
 }
+
 
 /**
  * Retrieves the hardware time and
