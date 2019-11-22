@@ -308,7 +308,6 @@ void interruptPrint(char msg[]) {
  * Prepares the message queue for use.
  */
 void initMessageQueue() {
-	numMessages = 0;
 	messageQueueID = QCreate("msgQueue");
 }
 
@@ -333,26 +332,21 @@ long sendMessage(long targetPID, char* messageBuffer, long msgSendLength) {
 	Process* sender = currentProcess();
 
 	//OS must restrict the number of messages present.
-	msgLock();
-	if(numMessages >= 20) {
-		msgUnlock();
+	if(currentProcess()->messagesSent >= 25) {
 		return -1;
 	}
 
 	//pid must exist.
 	if((int)target == -1 && targetPID != -1) {
-		msgUnlock();
 		return -1;
 	}
 
 	if(msgSendLength >= 1000) {
-		msgUnlock();
 		return -1;
 	}
 
 	//send length can't be less than buffer size
 	if(msgSendLength < strlen(messageBuffer) + 1) {
-		msgUnlock();
 		return -1;
 	}
 
@@ -392,7 +386,7 @@ long sendMessage(long targetPID, char* messageBuffer, long msgSendLength) {
 		msgSuspendUnlock();
 
 	}
-	++numMessages;
+	++currentProcess()->messagesSent;
 	msgUnlock();
 	return 0;
 
@@ -492,7 +486,6 @@ long receiveMessage(long sourcePID, char* receiveBuffer, long receiveLength, lon
 	*senderPid = msg->from;
 
 	QRemoveItem(messageQueueID, msg);
-	--numMessages;
 	msgUnlock();
 
 	return 0;

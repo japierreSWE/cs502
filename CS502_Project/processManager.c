@@ -119,6 +119,7 @@ void createInitialProcess(long address, long pageTable) {
 
 	process->contextId = mmio.Field1;
 	process->currentDirectorySector = -1;
+	process->messagesSent = 0;
 
 	storeProcess(process);
 
@@ -368,6 +369,7 @@ long createProcess(char* processName, void* startingAddress, long initialPriorit
 
 	process->currentDirectorySector = -1;
 	process->contextId = mmio.Field1;
+	process->messagesSent = 0;
 
 	storeProcess(process);
 

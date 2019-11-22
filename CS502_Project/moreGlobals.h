@@ -25,6 +25,7 @@
 //contextId: the process's contextId
 //currentDirectorySector: the sector of the disk containing the current directory.
 //currentDisk: the diskID containing the current directory
+//messagesSent: the number of messages sent by this process.
 struct Process {
 	long pid;
 	long priority;
@@ -34,6 +35,7 @@ struct Process {
 	long contextId;
 	int currentDirectorySector;
 	long currentDisk;
+	int messagesSent;
 };
 
 typedef struct Process Process;
@@ -77,7 +79,6 @@ int numProcesses; //the current number of processes.
 int messageQueueID; //queue containing messages.
 int msgSuspendQueueID; //queue containing processes waiting for a message.
 
-int numMessages; //number of messages in the queue.
 int numProcessors;
 
 int interruptPrints;
