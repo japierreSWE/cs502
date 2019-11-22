@@ -25,6 +25,7 @@ typedef struct {
 
 } OpenFile;
 
+//TODO: find the bug in test29 that causes occaisional freezing
 
 void initDiskContents();
 int isUnwritten(unsigned char* buffer);
@@ -61,7 +62,6 @@ int formatDisk(int diskID) {
 	initDiskContents();
 	formattedDisk = 1;
 
-	//TODO: put a lock on this queue.
 	openFilesQueueId = QCreate("openFilesQ");
 
 	unsigned char* sectorZeroBuffer = malloc(PGSIZE * sizeof(char));
@@ -302,7 +302,6 @@ void flushDiskContents() {
  */
 long findOpenSector() {
 
-	//TODO: put lock on bitmap.
 	long index = 0;
 	unsigned char* tempBuffer = malloc(PGSIZE * sizeof(char));
 
