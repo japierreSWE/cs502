@@ -265,6 +265,15 @@ void FaultHandler(void) {
                             (int) mmio.Field1, (int) mmio.Field2);
     }
 
+    int pageNumber = Status;
+    UINT16* pageTable = (UINT16*)currentProcess()->pageTable;
+
+    pageTable[pageNumber] = 0;
+    pageTable[pageNumber] = pageTable[pageNumber] | PTBL_VALID_BIT;
+
+    addToReadyQueue(currentProcess());
+    dispatch();
+
 } // End of FaultHandler
 
 /************************************************************************
@@ -828,6 +837,10 @@ void osInit(int argc, char *argv[]) {
     	long address = (long)test26;
     	pcbInit(address, (long)PageTable);
 
+    } else if((argc > 1) && (strcmp(argv[1], "test41") == 0)) {
+
+    	long address = (long)test41;
+    	pcbInit(address, (long)PageTable);
     }
 
     //otherwise, we do the default: running test0.
