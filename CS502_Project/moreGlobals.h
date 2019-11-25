@@ -15,6 +15,7 @@
 
 #define INTERRUPT_PRINTS_LIMIT 10
 #define SYSNUM_MULTIDISPATCH 50
+#include "syscalls.h"
 
 //Struct for a process.
 //pid: the process ID.
@@ -82,6 +83,9 @@ int msgSuspendQueueID; //queue containing processes waiting for a message.
 int numProcessors;
 
 int interruptPrints;
+int memoryPrints;
+
+MP_INPUT_DATA* MPData;
 
 void timerLock();
 void timerUnlock();
@@ -110,5 +114,6 @@ void initMsgSuspendQueue();
 long sendMessage(long targetPID, char* messageBuffer, long msgSendLength);
 long receiveMessage(long sourcePID, char* receiveBuffer, long receiveLength, long* sendLength, long* senderPid);
 void getNumProcessors();
+void memoryPrint();
 
 #endif /* MOREGLOBALS_H_ */

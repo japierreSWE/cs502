@@ -33,7 +33,7 @@
     Change FALSE to TRUE to enable a feature.
 ******************************************************************/
 #define         DO_DEVICE_DEBUG                 FALSE
-#define         DO_MEMORY_DEBUG                 FALSE
+#define         DO_MEMORY_DEBUG                 TRUE
 
 //  These four are very useful for my debugging the hardware,
 //  but are probably less useful for students.  Use these ONLY

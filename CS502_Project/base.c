@@ -37,6 +37,7 @@
 #include			 "processManager.h"
 #include 			 "moreGlobals.h"
 #include			 "fileSystem.h"
+#include			 "frameHandler.h"
 
 
 //  This is a mapping of system call nmemonics with definitions
@@ -265,11 +266,33 @@ void FaultHandler(void) {
                             (int) mmio.Field1, (int) mmio.Field2);
     }
 
-    int pageNumber = Status;
+    int pageNumber = Status % 1024;
     UINT16* pageTable = (UINT16*)currentProcess()->pageTable;
 
-    pageTable[pageNumber] = 0;
+    //this block should run for illegal address request.
+    //we got here and the bit is valid, and the page entry is initialized.
+    if((pageTable[pageNumber] & PTBL_VALID_BIT) != 0) {
+    	aprintf("Illegal memory address requested. Terminating process.\n");
+    	terminateProcess(-1);
+    }
+
+    //TODO: put locks on getting frames.
+
+    int freeFrame = getFreeFrame();
+
+    if(freeFrame == -1) {
+    	aprintf("Page replacement needed!\n");
+    	exit(0);
+    }
+
+    pageTable[pageNumber] = freeFrame;
     pageTable[pageNumber] = pageTable[pageNumber] | PTBL_VALID_BIT;
+
+    MPData->frames[freeFrame].InUse = 1;
+    MPData->frames[freeFrame].LogicalPage = pageNumber;
+    MPData->frames[freeFrame].Pid = currentProcess()->pid;
+
+    memoryPrint();
 
     addToReadyQueue(currentProcess());
     dispatch();
@@ -840,6 +863,10 @@ void osInit(int argc, char *argv[]) {
     } else if((argc > 1) && (strcmp(argv[1], "test41") == 0)) {
 
     	long address = (long)test41;
+    	pcbInit(address, (long)PageTable);
+    } else if((argc > 1) && (strcmp(argv[1], "test42") == 0)) {
+
+    	long address = (long)test42;
     	pcbInit(address, (long)PageTable);
     }
 

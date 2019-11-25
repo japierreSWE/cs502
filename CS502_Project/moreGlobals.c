@@ -491,3 +491,12 @@ long receiveMessage(long sourcePID, char* receiveBuffer, long receiveLength, lon
 	return 0;
 
 }
+
+/**
+ * Makes the memory printer report
+ * memory management info.
+ */
+void memoryPrint() {
+	MPPrintLine(MPData);
+	++memoryPrints;
+}
