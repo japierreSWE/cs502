@@ -13,7 +13,7 @@
 #include "processManager.h"
 #include "diskManager.h"
 #include "dispatcher.h"
-#include "frameHandler.h"
+#include "memoryManager.h"
 #include "moreGlobals.h"
 
 void storeProcess(Process* process);
@@ -57,7 +57,7 @@ void pcbInit(long address, long pageTable) {
 	initSuspendQueue();
 	initMessageQueue();
 	initMsgSuspendQueue();
-	initFrameHandler();
+	initMemoryManager();
 	getNumProcessors();
 
 	//if this is multiprocessed,

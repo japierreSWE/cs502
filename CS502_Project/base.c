@@ -37,7 +37,7 @@
 #include			 "processManager.h"
 #include 			 "moreGlobals.h"
 #include			 "fileSystem.h"
-#include			 "frameHandler.h"
+#include			 "memoryManager.h"
 
 
 //  This is a mapping of system call nmemonics with definitions
@@ -276,26 +276,8 @@ void FaultHandler(void) {
     	terminateProcess(-1);
     }
 
-    //TODO: put locks on getting frames.
+    handlePageFault(pageNumber);
 
-    int freeFrame = getFreeFrame();
-
-    if(freeFrame == -1) {
-    	aprintf("Page replacement needed!\n");
-    	exit(0);
-    }
-
-    pageTable[pageNumber] = freeFrame;
-    pageTable[pageNumber] = pageTable[pageNumber] | PTBL_VALID_BIT;
-
-    MPData->frames[freeFrame].InUse = 1;
-    MPData->frames[freeFrame].LogicalPage = pageNumber;
-    MPData->frames[freeFrame].Pid = currentProcess()->pid;
-
-    memoryPrint();
-
-    addToReadyQueue(currentProcess());
-    dispatch();
 
 } // End of FaultHandler
 
@@ -871,6 +853,10 @@ void osInit(int argc, char *argv[]) {
     } else if((argc > 1) && (strcmp(argv[1], "test43") == 0)) {
 
     	long address = (long)test43;
+    	pcbInit(address, (long)PageTable);
+    } else if((argc > 1) && (strcmp(argv[1], "test44") == 0)) {
+
+    	long address = (long)test44;
     	pcbInit(address, (long)PageTable);
     }
 

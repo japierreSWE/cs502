@@ -60,7 +60,7 @@ int formatDisk(int diskID) {
 	}
 
 	initDiskContents();
-	formattedDisk = 1;
+	formattedDisk = diskID;
 
 	openFilesQueueId = QCreate("openFilesQ");
 

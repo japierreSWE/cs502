@@ -9,6 +9,7 @@
 #define FRAMEHANDLER_H_
 
 int getFreeFrame();
-void initFrameHandler();
+void initMemoryManager();
+void handlePageFault(int pageNumber);
 
 #endif /* FRAMEHANDLER_H_ */

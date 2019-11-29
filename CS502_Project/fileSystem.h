@@ -11,6 +11,9 @@
 #ifndef FILESYSTEM_H_
 #define FILESYSTEM_H_
 
+#define SWAP_SIZE 4*0x80
+#define SWAP_LOCATION 0x600
+
 int formatDisk(int diskID);
 int openDir(int diskID, char* directoryName);
 void flushDiskContents();
@@ -23,6 +26,6 @@ int readFile(long inode, int logicalBlock, char* readBuffer);
 void dirContents();
 void bufferCopy(unsigned char* src, unsigned char* dest);
 
-int formattedDisk;
+int formattedDisk; //which disk is formatted?
 
 #endif /* FILESYSTEM_H_ */
