@@ -12,6 +12,7 @@
 #include "diskManager.h"
 #include "processManager.h"
 #include "fileSystem.h"
+#include "memoryManager.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -1121,5 +1122,66 @@ void dirContents() {
 
 	}
 
+
+}
+
+/**
+ * Writes a given page's data to swap space.
+ * Parameters:
+ * pageNumber: the page to write.
+ */
+void writeToSwapSpace(int pageNumber) {
+
+	UINT16* pageTable = (UINT16*)currentProcess()->pageTable;
+	char* pageData = calloc(PGSIZE, sizeof(char));
+
+	Z502ReadPhysicalMemory(pageTable[pageNumber] & PTBL_PHYS_PG_NO, pageData);
+
+	int swapSpaceBlock = getSwapSpaceBlock(pageNumber);
+	int diskID = getFormattedDisk();
+
+	writeToDisk(diskID, swapSpaceBlock, pageData);
+
+	diskContentsLock();
+	memcpy(diskContents[swapSpaceBlock], pageData, PGSIZE);
+	diskContentsUnlock();
+
+	free(pageData);
+
+}
+
+/**
+ * Reads a given page's data from swap space.
+ * Parameters:
+ * pageNumber: the page to read.
+ * Returns a pointer to the page's data.
+ */
+char* readFromSwapSpace(int pageNumber) {
+
+	char* pageData = calloc(PGSIZE, sizeof(char));
+
+	int swapSpaceBlock = getSwapSpaceBlock(pageNumber);
+	int diskID = getFormattedDisk();
+
+	if(!isUnwritten(diskContents[swapSpaceBlock])) {
+		readFromDisk(diskID, swapSpaceBlock, pageData);
+	}
+
+	return pageData;
+
+}
+
+/**
+ * Finds a disk that is formatted for this process to use.
+ * Returns a formatted diskID.
+ */
+int getFormattedDisk() {
+
+	if(formattedDisk != -1) {
+		return formattedDisk;
+	}
+
+	formatDisk(0);
+	return formattedDisk;
 
 }

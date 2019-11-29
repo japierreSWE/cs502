@@ -25,6 +25,9 @@ int closeFile(long inode);
 int readFile(long inode, int logicalBlock, char* readBuffer);
 void dirContents();
 void bufferCopy(unsigned char* src, unsigned char* dest);
+void writeToSwapSpace(int pageNumber);
+char* readFromSwapSpace(int pageNumber);
+int getFormattedDisk();
 
 int formattedDisk; //which disk is formatted?
 

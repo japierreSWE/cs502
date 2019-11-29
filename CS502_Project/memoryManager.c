@@ -21,10 +21,6 @@ int* frameTable; //frameTable[i] is the page number for the ith frame
 int* swapTable; //swapTable[i] is the swap space block of the ith page
 int* swapBlockAvailability; //if swapBlockAvailability[i] == 1, that swap space block is available
 
-void writeToSwapSpace(int pageNumber);
-char* readFromSwapSpace(int pageNumber);
-int getSwapSpaceBlock(int pageNumber);
-int getFormattedDisk();
 
 /**
  * Sets up the memory manager by initializing
@@ -104,11 +100,13 @@ int getVictimFrame() {
 
 			return i;
 
+		} else {
+			pageTable[pageNumber] &= (~PTBL_REFERENCED_BIT);
 		}
 
 	}
 
-	return -1;
+	return 0;
 
 }
 
@@ -124,8 +122,6 @@ void handlePageFault(int pageNumber) {
 	UINT16* pageTable = (UINT16*)currentProcess()->pageTable;
 
 	if(freeFrame == -1) {
-		aprintf("Page replacement needed!\n");
-
 		/*
 		 * 1. Find a victim frame (a frame whose page has no reference bit)
 		 * 2. If the page has been modified(check modify bit), write the victim frame
@@ -157,15 +153,16 @@ void handlePageFault(int pageNumber) {
 		//the victim frame is being used by this page now.
 		frameTable[victimFrameNumber] = pageNumber;
 
-		//clear all reference bits.
+		/*//clear all reference bits.
 		for(int i = 0; i<1024; i++) {
 
 			pageTable[i] = pageTable[i] & (~PTBL_REFERENCED_BIT);
 
-		}
+		}*/
 
 		//TODO: memory printing needed here
 
+		addToReadyQueue(currentProcess());
 		dispatch();
 		return;
 	}
@@ -184,43 +181,6 @@ void handlePageFault(int pageNumber) {
 
 }
 
-/**
- * Writes a given page's data to swap space.
- * Parameters:
- * pageNumber: the page to write.
- */
-void writeToSwapSpace(int pageNumber) {
-
-	UINT16* pageTable = (UINT16*)currentProcess()->pageTable;
-	char* pageData = calloc(PGSIZE, sizeof(char));
-
-	Z502ReadPhysicalMemory(pageTable[pageNumber] & PTBL_PHYS_PG_NO, pageData);
-
-	int swapSpaceBlock = getSwapSpaceBlock(pageNumber);
-	int diskID = getFormattedDisk();
-
-	writeToDisk(diskID, swapSpaceBlock, pageData);
-	free(pageData);
-
-}
-
-/**
- * Reads a given page's data from swap space.
- * Parameters:
- * pageNumber: the page to read.
- * Returns a pointer to the page's data.
- */
-char* readFromSwapSpace(int pageNumber) {
-
-	char* pageData = calloc(PGSIZE, sizeof(char));
-
-	int swapSpaceBlock = getSwapSpaceBlock(pageNumber);
-	int diskID = getFormattedDisk();
-
-	readFromDisk(diskID, swapSpaceBlock, pageData);
-	return pageData;
-
-}
 
 /**
  * Finds a block in swap space for a given
@@ -252,20 +212,5 @@ int getSwapSpaceBlock(int pageNumber) {
 
 	swapTable[pageNumber] = SWAP_LOCATION + blockUsed;
 	return swapTable[pageNumber];
-
-}
-
-/**
- * Finds a disk that is formatted for this process to use.
- * Returns a formatted diskID.
- */
-int getFormattedDisk() {
-
-	if(formattedDisk != -1) {
-		return formattedDisk;
-	}
-
-	formatDisk(0);
-	return formattedDisk;
 
 }

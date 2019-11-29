@@ -11,5 +11,6 @@
 int getFreeFrame();
 void initMemoryManager();
 void handlePageFault(int pageNumber);
+int getSwapSpaceBlock(int pageNumber);
 
 #endif /* FRAMEHANDLER_H_ */
