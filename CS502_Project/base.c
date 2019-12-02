@@ -846,18 +846,27 @@ void osInit(int argc, char *argv[]) {
 
     	long address = (long)test41;
     	pcbInit(address, (long)PageTable);
+
     } else if((argc > 1) && (strcmp(argv[1], "test42") == 0)) {
 
     	long address = (long)test42;
     	pcbInit(address, (long)PageTable);
+
     } else if((argc > 1) && (strcmp(argv[1], "test43") == 0)) {
 
     	long address = (long)test43;
     	pcbInit(address, (long)PageTable);
+
     } else if((argc > 1) && (strcmp(argv[1], "test44") == 0)) {
 
     	long address = (long)test44;
     	pcbInit(address, (long)PageTable);
+
+    } else if((argc > 1) && (strcmp(argv[1], "test45") == 0)) {
+
+    	long address = (long)test45;
+    	pcbInit(address, (long)PageTable);
+
     }
 
     //otherwise, we do the default: running test0.

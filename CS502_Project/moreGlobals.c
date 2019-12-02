@@ -27,7 +27,8 @@
 #define					 MSG_SUSPEND_LOCK 			 MEMORY_INTERLOCK_BASE+6
 #define					 DISK_CONTENTS_LOCK			 MEMORY_INTERLOCK_BASE+7
 #define					 OPEN_FILES_LOCK			 MEMORY_INTERLOCK_BASE+8
-#define					 MEM_LOCK					 MEMORY_INTERLOCK_BASE+9
+#define					 MEMORY_LOCK			     MEMORY_INTERLOCK_BASE+9
+#define					 SWAP_LOCK					 MEMORY_INTERLOCK_BASE+10
 
 Message* findMessage();
 
@@ -211,6 +212,45 @@ void openFilesUnlock() {
 	READ_MODIFY(OPEN_FILES_LOCK,DO_UNLOCK,SUSPEND_UNTIL_LOCKED,&lockResult);
 }
 
+/**
+ * Performs a hardware interlock for memory.
+ * It attempts to lock, suspending until
+ * this thread holds the lock.
+ */
+void memLock() {
+	INT32 lockResult;
+	READ_MODIFY(MEMORY_LOCK,DO_LOCK,SUSPEND_UNTIL_LOCKED,&lockResult);
+}
+
+/**
+ * Performs a hardware interlock for memory.
+ * It attempts to unlock, suspending until
+ * this thread holds the lock.
+ */
+void memUnlock() {
+	INT32 lockResult;
+	READ_MODIFY(MEMORY_LOCK,DO_UNLOCK,SUSPEND_UNTIL_LOCKED,&lockResult);
+}
+
+/**
+ * Performs a hardware interlock for swap space.
+ * It attempts to lock, suspending until
+ * this thread holds the lock.
+ */
+void swapLock() {
+	INT32 lockResult;
+	READ_MODIFY(SWAP_LOCK,DO_LOCK,SUSPEND_UNTIL_LOCKED,&lockResult);
+}
+
+/**
+ * Performs a hardware interlock for swap space.
+ * It attempts to unlock, suspending until
+ * this thread holds the lock.
+ */
+void swapUnlock() {
+	INT32 lockResult;
+	READ_MODIFY(SWAP_LOCK,DO_UNLOCK,SUSPEND_UNTIL_LOCKED,&lockResult);
+}
 
 /**
  * Retrieves the hardware time and

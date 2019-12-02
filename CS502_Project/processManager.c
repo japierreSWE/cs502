@@ -102,7 +102,12 @@ void createInitialProcess(long address, long pageTable) {
 	process->priority = 10;
 	process->pid =  currPidNumber;
 	process->startingAddress = address;
-	process->pageTable = pageTable;
+	process->pageTable = (UINT16*)pageTable;
+	process->swapTable = (int*)calloc(1024, sizeof(int));
+
+	for(int i = 0; i<1024; i++) {
+		process->swapTable[i] = -1;
+	}
 
 	//start the process by initializing then starting context.
 	MEMORY_MAPPED_IO mmio;
@@ -350,16 +355,21 @@ long createProcess(char* processName, void* startingAddress, long initialPriorit
 	process->startingAddress = (long)startingAddress;
 	process->priority = initialPriority;
 	process->pid = currPidNumber;
+	process->swapTable = (int*)calloc(1024, sizeof(int));
+
+	for(int i = 0; i<1024; i++) {
+		process->swapTable[i] = -1;
+	}
 
 	void *pageTable = (void *) calloc(2, NUMBER_VIRTUAL_PAGES );
-	process->pageTable = (long)pageTable;
+	process->pageTable = pageTable;
 
 	//start the process by initializing then starting context.
 	MEMORY_MAPPED_IO mmio;
 	mmio.Mode = Z502InitializeContext;
 	mmio.Field1 = 0;
 	mmio.Field2 = (long) process->startingAddress;
-	mmio.Field3 = process->pageTable;
+	mmio.Field3 = (long)process->pageTable;
 
 	MEM_WRITE(Z502Context, &mmio);   // Start of Make Context Sequence
 

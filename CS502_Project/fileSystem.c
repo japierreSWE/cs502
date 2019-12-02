@@ -1126,32 +1126,33 @@ void dirContents() {
 }
 
 /**
- * Writes a given page's data to swap space.
+ * Writes a given frame's data to swap space.
  * Parameters:
- * pageNumber: the page to write.
+ * frameData: the frame to write.
  */
-void writeToSwapSpace(int pageNumber) {
+void writeToSwapSpace(FrameData* frameData) {
 
-	UINT16* pageTable = (UINT16*)currentProcess()->pageTable;
+	UINT16* pageTable = (UINT16*)getProcess(frameData->pid)->pageTable;
 	char* pageData = calloc(PGSIZE, sizeof(char));
 
-	Z502ReadPhysicalMemory(pageTable[pageNumber] & PTBL_PHYS_PG_NO, pageData);
+	Z502ReadPhysicalMemory(pageTable[frameData->pageNumber] & PTBL_PHYS_PG_NO, pageData);
 
-	int swapSpaceBlock = getSwapSpaceBlock(pageNumber);
+	swapLock();
+	int swapSpaceBlock = getSwapSpaceBlockFromFrame(frameData);
+	swapUnlock();
+
 	int diskID = getFormattedDisk();
 
 	writeToDisk(diskID, swapSpaceBlock, pageData);
 
-	diskContentsLock();
 	memcpy(diskContents[swapSpaceBlock], pageData, PGSIZE);
-	diskContentsUnlock();
 
 	free(pageData);
 
 }
 
 /**
- * Reads a given page's data from swap space.
+ * Reads a given page's data from swap space for this process.
  * Parameters:
  * pageNumber: the page to read.
  * Returns a pointer to the page's data.
@@ -1160,7 +1161,10 @@ char* readFromSwapSpace(int pageNumber) {
 
 	char* pageData = calloc(PGSIZE, sizeof(char));
 
+	swapLock();
 	int swapSpaceBlock = getSwapSpaceBlock(pageNumber);
+	swapUnlock();
+
 	int diskID = getFormattedDisk();
 
 	if(!isUnwritten(diskContents[swapSpaceBlock])) {

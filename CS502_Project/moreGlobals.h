@@ -32,7 +32,8 @@ struct Process {
 	long priority;
 	char* name;
 	long startingAddress;
-	long pageTable;
+	UINT16* pageTable;
+	int* swapTable;
 	long contextId;
 	int currentDirectorySector;
 	long currentDisk;
@@ -74,6 +75,13 @@ struct DiskRequest {
 
 typedef struct DiskRequest DiskRequest;
 
+struct FrameData {
+	int pageNumber; //pageNumber of page table using this frame.
+	int pid; //pid of process using this frame.
+};
+
+typedef struct FrameData FrameData;
+
 int timerQueueID;
 int processQueueID;
 int numProcesses; //the current number of processes.
@@ -105,6 +113,10 @@ void readyLock();
 void readyUnlock();
 void openFilesLock();
 void openFilesUnlock();
+void memLock();
+void memUnlock();
+void swapLock();
+void swapUnlock();
 long getTimeOfDay();
 void createTimerQueue();
 int addToTimerQueue(TimerRequest* request);
