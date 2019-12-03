@@ -1132,7 +1132,8 @@ void dirContents() {
  */
 void writeToSwapSpace(FrameData* frameData) {
 
-	UINT16* pageTable = (UINT16*)getProcess(frameData->pid)->pageTable;
+	Process* userOfFrame = getProcess(frameData->pid);
+	UINT16* pageTable = userOfFrame->pageTable;
 	char* pageData = calloc(PGSIZE, sizeof(char));
 
 	Z502ReadPhysicalMemory(pageTable[frameData->pageNumber] & PTBL_PHYS_PG_NO, pageData);

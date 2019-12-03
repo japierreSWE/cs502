@@ -96,15 +96,24 @@ int getVictimFrame() {
 	for(int i = 0; i < NUMBER_PHYSICAL_PAGES; i++) {
 
 		int pageNumber = frameTable[i].pageNumber;
-		UINT16* pageTable = (UINT16*)getProcess(frameTable[i].pid)->pageTable;
+		Process* userOfFrame = getProcess(frameTable[i].pid);
 
-		if( (pageTable[pageNumber] & PTBL_REFERENCED_BIT) == 0) {
+		if((int)userOfFrame != -1) {
 
-			return i;
+			UINT16* pageTable = userOfFrame->pageTable;
+
+			if( (pageTable[pageNumber] & PTBL_REFERENCED_BIT) == 0) {
+
+				return i;
+
+			} else {
+				pageTable[pageNumber] &= (~PTBL_REFERENCED_BIT);
+			}
 
 		} else {
-			pageTable[pageNumber] &= (~PTBL_REFERENCED_BIT);
+			return i;
 		}
+
 
 	}
 
@@ -142,9 +151,10 @@ void handlePageFault(int pageNumber) {
 
 		FrameData victimFrame = frameTable[victimFrameNumber];
 		Process* victimFrameUser = getProcess(victimFrame.pid);
-		UINT16 pageOfVictimFrame = victimFrameUser->pageTable[victimFrame.pageNumber];
 
-		if( (pageOfVictimFrame & PTBL_MODIFIED_BIT) != 0) {
+
+		if((int)victimFrameUser != -1 &&
+				(victimFrameUser->pageTable[victimFrame.pageNumber] & PTBL_MODIFIED_BIT) != 0) {
 
 			writeToSwapSpace(&frameTable[victimFrameNumber]);
 
@@ -157,9 +167,17 @@ void handlePageFault(int pageNumber) {
 		//the current page should have the victim frame.
 		thisPageTable[pageNumber] = victimFrameNumber | PTBL_VALID_BIT;
 
-		//the page that was using the victim frame can't use it anymore.
-		//not valid.
-		victimFrameUser->pageTable[victimFrame.pageNumber] = pageOfVictimFrame & (~PTBL_VALID_BIT);
+		//only do work on the process losing the
+		//frame if it still exists.
+		if((int)victimFrameUser != -1) {
+
+			UINT16 pageOfVictimFrame = victimFrameUser->pageTable[victimFrame.pageNumber];
+
+			//the page that was using the victim frame can't use it anymore.
+			//not valid.
+			victimFrameUser->pageTable[victimFrame.pageNumber] = pageOfVictimFrame & (~PTBL_VALID_BIT);
+
+		}
 
 		//the victim frame is being used by this page now.
 		frameTable[victimFrameNumber].pageNumber = pageNumber;
