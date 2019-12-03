@@ -129,8 +129,6 @@ int getVictimFrame() {
  */
 void handlePageFault(int pageNumber) {
 
-	//TODO: put locks on getting frames.
-
 	memLock();
 	int freeFrame = getFreeFrame(pageNumber);
 	memUnlock();
@@ -179,12 +177,16 @@ void handlePageFault(int pageNumber) {
 
 		}
 
+		memLock();
 		//the victim frame is being used by this page now.
 		frameTable[victimFrameNumber].pageNumber = pageNumber;
 		frameTable[victimFrameNumber].pid = currentProcess()->pid;
+		memUnlock();
 
 
-		//TODO: memory printing needed here
+		MPData->frames[victimFrameNumber].LogicalPage = pageNumber;
+		MPData->frames[victimFrameNumber].Pid = currentProcess()->pid;
+		memoryPrint();
 
 		addToReadyQueue(currentProcess());
 		dispatch();
@@ -194,8 +196,10 @@ void handlePageFault(int pageNumber) {
 	thisPageTable[pageNumber] = freeFrame;
 	thisPageTable[pageNumber] = thisPageTable[pageNumber] | PTBL_VALID_BIT;
 
+	memLock();
 	frameTable[freeFrame].pid = currentProcess()->pid;
 	frameTable[freeFrame].pageNumber = pageNumber;
+	memUnlock();
 
 	MPData->frames[freeFrame].InUse = 1;
 	MPData->frames[freeFrame].LogicalPage = pageNumber;

@@ -17,6 +17,7 @@ void checkDisk(long diskID);
 long getDiskStatus(long diskID);
 void addToDiskQueue(long diskID, int currentlyUsing);
 Process* removeFromDiskQueue(long diskID, int ignoreCurrentlyUsing);
+int areEqual(char* buf1, char* buf2);
 
 int diskQueueId;
 #endif /* DISKMANAGER_H_ */

@@ -1144,9 +1144,8 @@ void writeToSwapSpace(FrameData* frameData) {
 
 	int diskID = getFormattedDisk();
 
-	writeToDisk(diskID, swapSpaceBlock, pageData);
-
 	memcpy(diskContents[swapSpaceBlock], pageData, PGSIZE);
+	writeToDisk(diskID, swapSpaceBlock, pageData);
 
 	free(pageData);
 
@@ -1161,6 +1160,9 @@ void writeToSwapSpace(FrameData* frameData) {
 char* readFromSwapSpace(int pageNumber) {
 
 	char* pageData = calloc(PGSIZE, sizeof(char));
+	char* tempBuffer = calloc(PGSIZE, sizeof(char));
+
+	memcpy(tempBuffer, pageData, PGSIZE);
 
 	swapLock();
 	int swapSpaceBlock = getSwapSpaceBlock(pageNumber);
@@ -1170,6 +1172,7 @@ char* readFromSwapSpace(int pageNumber) {
 
 	if(!isUnwritten(diskContents[swapSpaceBlock])) {
 		readFromDisk(diskID, swapSpaceBlock, pageData);
+
 	}
 
 	return pageData;

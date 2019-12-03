@@ -537,6 +537,8 @@ long receiveMessage(long sourcePID, char* receiveBuffer, long receiveLength, lon
  * memory management info.
  */
 void memoryPrint() {
-	MPPrintLine(MPData);
-	++memoryPrints;
+	if(memoryPrints < 50) {
+		MPPrintLine(MPData);
+		++memoryPrints;
+	}
 }
