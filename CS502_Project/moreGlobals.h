@@ -78,6 +78,7 @@ typedef struct DiskRequest DiskRequest;
 struct FrameData {
 	int pageNumber; //pageNumber of page table using this frame.
 	int pid; //pid of process using this frame.
+	int free; //1 if free. 0 otherwise
 };
 
 typedef struct FrameData FrameData;

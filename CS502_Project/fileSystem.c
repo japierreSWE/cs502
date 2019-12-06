@@ -252,7 +252,7 @@ void initDiskContents() {
  * so that they can be
  * shown in checkDisk.
  */
-void flushDiskContents() {
+void flushDiskContents(int diskID) {
 
 	//diskContentsLock();
 	long index = 0;
@@ -265,9 +265,9 @@ void flushDiskContents() {
 
 		//if we haven't written to this part of the bitmap.
 		if(isUnwritten(sector)) {
-			return;
+			break;
 		} else {
-			writeToDisk(currentProcess()->currentDisk, i, (char*)sector);
+			writeToDisk(diskID, i, (char*)sector);
 		}
 
 		for(int j = 0; j<PGSIZE; j++) {
@@ -280,7 +280,7 @@ void flushDiskContents() {
 				//if we find a bit.
 				if(masked >> shiftAmount == 1) {
 
-					writeToDisk(currentProcess()->currentDisk, index, (char*)diskContents[index]);
+					writeToDisk(diskID, index, (char*)diskContents[index]);
 
 				}
 
@@ -292,6 +292,16 @@ void flushDiskContents() {
 
 	}
 	//diskContentsUnlock();
+
+	//we write all of the swap space.
+	for(int i = SWAP_LOCATION; i<SWAP_LOCATION+SWAP_SIZE; i++) {
+
+		if(!isUnwritten(diskContents[i])) {
+			writeToDisk(diskID, i, (char*)diskContents[i]);
+		}
+
+	}
+
 }
 
 /*
@@ -1034,7 +1044,7 @@ int closeFile(long inode) {
 		openFilesLock();
 		QRemoveItem(openFilesQueueId, file);
 		openFilesUnlock();
-		flushDiskContents();
+		flushDiskContents(currentProcess()->currentDisk);
 		return 0;
 	}
 
@@ -1145,7 +1155,7 @@ void writeToSwapSpace(FrameData* frameData) {
 	int diskID = getFormattedDisk();
 
 	memcpy(diskContents[swapSpaceBlock], pageData, PGSIZE);
-	writeToDisk(diskID, swapSpaceBlock, pageData);
+	//writeToDisk(diskID, swapSpaceBlock, pageData);
 
 	free(pageData);
 
@@ -1171,11 +1181,12 @@ char* readFromSwapSpace(int pageNumber) {
 	int diskID = getFormattedDisk();
 
 	if(!isUnwritten(diskContents[swapSpaceBlock])) {
-		readFromDisk(diskID, swapSpaceBlock, pageData);
-
+		memcpy(pageData, diskContents[swapSpaceBlock], PGSIZE);
+		//readFromDisk(diskID, swapSpaceBlock, pageData);
+		return pageData;
+	} else {
+		return (char*)-1;
 	}
-
-	return pageData;
 
 }
 

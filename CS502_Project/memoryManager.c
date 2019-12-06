@@ -18,8 +18,9 @@
 #include "diskManager.h"
 
 
-FrameData* frameTable; //frameTable[i] is the page number for the ith frame
+FrameData** frameTable; //frameTable[i] is the page number for the ith frame
 int* swapBlockAvailability; //if swapBlockAvailability[i] == 1, that swap space block is available
+int frameCursor = 0; //used for clock algorithm
 
 //each process should have swap table.
 //frame table should contain swap block, process that put it there, and page number.
@@ -32,12 +33,14 @@ int* swapBlockAvailability; //if swapBlockAvailability[i] == 1, that swap space 
 void initMemoryManager() {
 
 	formattedDisk = -1;
-	frameTable = calloc(NUMBER_PHYSICAL_PAGES, sizeof(FrameData));
+	frameTable = calloc(NUMBER_PHYSICAL_PAGES, sizeof(FrameData*));
 	swapBlockAvailability = calloc(SWAP_SIZE, sizeof(int));
 
 	for(int i = 0; i<NUMBER_PHYSICAL_PAGES; i++) {
 		//frameTable[i] == -1 means the ith frame is free.
-		frameTable[i].pageNumber = -1;
+		frameTable[i] = malloc(sizeof(FrameData));
+		frameTable[i]->free = 1;
+		frameTable[i]->pid = -1; //this means not used yet.
 	}
 
 	/*for(int i = 0; i<1024; i++) {
@@ -68,7 +71,7 @@ int getFreeFrame(int pageNumber) {
 
 	for(int i = 0; i<NUMBER_PHYSICAL_PAGES; i++) {
 
-		if(frameTable[i].pageNumber == -1) {
+		if(frameTable[i]->free == 1) {
 			freeFrame = i;
 			break;
 		}
@@ -77,8 +80,9 @@ int getFreeFrame(int pageNumber) {
 
 	if(freeFrame != -1) {
 
-		frameTable[freeFrame].pageNumber = pageNumber;
-		frameTable[freeFrame].pid = currentProcess()->pid;
+		frameTable[freeFrame]->free = 0;
+		//frameTable[freeFrame]->pageNumber = pageNumber;
+		//frameTable[freeFrame]->pid = currentProcess()->pid;
 
 	}
 
@@ -93,10 +97,12 @@ int getFreeFrame(int pageNumber) {
  */
 int getVictimFrame() {
 
-	for(int i = 0; i < NUMBER_PHYSICAL_PAGES; i++) {
+	while(1) {
+		//circle back to start.
+		if(frameCursor >= 64) frameCursor = 0;
 
-		int pageNumber = frameTable[i].pageNumber;
-		Process* userOfFrame = getProcess(frameTable[i].pid);
+		int pageNumber = frameTable[frameCursor]->pageNumber;
+		Process* userOfFrame = getProcess(frameTable[frameCursor]->pid);
 
 		if((int)userOfFrame != -1) {
 
@@ -104,22 +110,21 @@ int getVictimFrame() {
 
 			if( (pageTable[pageNumber] & PTBL_REFERENCED_BIT) == 0) {
 
-				return i;
+				break;
 
 			} else {
 				pageTable[pageNumber] &= (~PTBL_REFERENCED_BIT);
 			}
 
 		} else {
-			return i;
+			break;
 		}
 
 
+		++frameCursor;
 	}
 
-	//we didn't find any non-referenced pages.
-	//return the 1st, then
-	return 0;
+	return frameCursor;
 
 }
 
@@ -129,12 +134,16 @@ int getVictimFrame() {
  */
 void handlePageFault(int pageNumber) {
 
+	int currentPid = currentProcess()->pid;
+	Process* curr = currentProcess();
+
 	memLock();
+
 	int freeFrame = getFreeFrame(pageNumber);
-	memUnlock();
+	//memUnlock();
 	UINT16* thisPageTable = (UINT16*)currentProcess()->pageTable;
 
-	if(freeFrame == -1) {
+	while(freeFrame == -1) {
 		/*
 		 * 1. Find a victim frame (a frame whose page has no reference bit)
 		 * 2. If the page has been modified(check modify bit), write the victim frame
@@ -143,71 +152,60 @@ void handlePageFault(int pageNumber) {
 		 * 4. Update page table and frame table
 		 */
 
-		memLock();
 		int victimFrameNumber = getVictimFrame();
-		memUnlock();
+		++frameCursor;
+		frameTable[victimFrameNumber]->free = 1;
+		freeFrame = getFreeFrame(pageNumber);
 
-		FrameData victimFrame = frameTable[victimFrameNumber];
-		Process* victimFrameUser = getProcess(victimFrame.pid);
+	}
 
+	//if someone has used this before, we do some
+	//necessary page replacement stuff
+	Process* frameUser = getProcess(frameTable[freeFrame]->pid);
 
-		if((int)victimFrameUser != -1 &&
-				(victimFrameUser->pageTable[victimFrame.pageNumber] & PTBL_MODIFIED_BIT) != 0) {
+	if((int)frameUser != -1) {
+		//write the frame to swap space.
+		//then read in our page.
 
-			writeToSwapSpace(&frameTable[victimFrameNumber]);
+		UINT16 pageOfFrame = frameUser->pageTable[frameTable[freeFrame]->pageNumber];
 
-		}
+		if( (pageOfFrame & PTBL_MODIFIED_BIT) != 0) {
 
-		char* currentPageData = readFromSwapSpace(pageNumber);
-
-		Z502WritePhysicalMemory(victimFrameNumber, currentPageData);
-
-		//the current page should have the victim frame.
-		thisPageTable[pageNumber] = victimFrameNumber | PTBL_VALID_BIT;
-
-		//only do work on the process losing the
-		//frame if it still exists.
-		if((int)victimFrameUser != -1) {
-
-			UINT16 pageOfVictimFrame = victimFrameUser->pageTable[victimFrame.pageNumber];
-
-			//the page that was using the victim frame can't use it anymore.
-			//not valid.
-			victimFrameUser->pageTable[victimFrame.pageNumber] = pageOfVictimFrame & (~PTBL_VALID_BIT);
+			writeToSwapSpace(frameTable[freeFrame]);
 
 		}
 
-		memLock();
-		//the victim frame is being used by this page now.
-		frameTable[victimFrameNumber].pageNumber = pageNumber;
-		frameTable[victimFrameNumber].pid = currentProcess()->pid;
-		memUnlock();
+		pageOfFrame = frameUser->pageTable[frameTable[freeFrame]->pageNumber];
+		//the page that was using the victim frame can't use it anymore.
+		//not valid.
+		frameUser->pageTable[frameTable[freeFrame]->pageNumber] = pageOfFrame & (~PTBL_VALID_BIT);
 
+		//aprintf("PID %d replaced at frame %d. \nReplaced: pid-%d pageNumber-%d\n",
+				//currentProcess()->pid, freeFrame, frameTable[freeFrame]->pid, frameTable[freeFrame]->pageNumber);
+	}
 
-		MPData->frames[victimFrameNumber].LogicalPage = pageNumber;
-		MPData->frames[victimFrameNumber].Pid = currentProcess()->pid;
-		memoryPrint();
+	char* currentPageData = readFromSwapSpace(pageNumber);
 
-		addToReadyQueue(currentProcess());
-		dispatch();
-		return;
+	if((int)currentPageData != -1) {
+		Z502WritePhysicalMemory(freeFrame, currentPageData);
 	}
 
 	thisPageTable[pageNumber] = freeFrame;
 	thisPageTable[pageNumber] = thisPageTable[pageNumber] | PTBL_VALID_BIT;
 
-	memLock();
-	frameTable[freeFrame].pid = currentProcess()->pid;
-	frameTable[freeFrame].pageNumber = pageNumber;
-	memUnlock();
+
+	frameTable[freeFrame]->pid = currentPid;
+	frameTable[freeFrame]->pageNumber = pageNumber;
 
 	MPData->frames[freeFrame].InUse = 1;
 	MPData->frames[freeFrame].LogicalPage = pageNumber;
-	MPData->frames[freeFrame].Pid = currentProcess()->pid;
+	MPData->frames[freeFrame].Pid = currentPid;
 
 	memoryPrint();
 
-	addToReadyQueue(currentProcess());
+	//aprintf("PID %d found frame %d for its page %d\n", currentProcess()->pid, freeFrame, pageNumber);
+	addToReadyQueue(curr);
+	memUnlock();
 	dispatch();
 
 }

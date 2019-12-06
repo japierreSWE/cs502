@@ -235,7 +235,7 @@ void readFromDisk(long diskID, long sector, char* readBuffer) {
  */
 void checkDisk(long diskID) {
 
-	flushDiskContents();
+	flushDiskContents(diskID);
 
 	//make request to hardware to check the disk.
 	MEMORY_MAPPED_IO mmio;
