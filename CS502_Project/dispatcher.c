@@ -111,10 +111,9 @@ void multiDispatch() {
  * start running.
  */
 void startMultidispatcher() {
-
 	SYSTEM_CALL_DATA *SystemCallData =
 		 (SYSTEM_CALL_DATA *)calloc(1, sizeof (SYSTEM_CALL_DATA));
-	SystemCallData->NumberOfArguments = 0;
+	SystemCallData->NumberOfArguments = -1;
 	SystemCallData->SystemCallNumber = SYSNUM_MULTIDISPATCH;
 	ChargeTimeAndCheckEvents( COST_OF_SOFTWARE_TRAP );
 	SoftwareTrap(SystemCallData);

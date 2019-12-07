@@ -298,7 +298,7 @@ void svc(SYSTEM_CALL_DATA *SystemCallData) {
     short i;
 
     call_type = (short) SystemCallData->SystemCallNumber;
-    if (do_print > 0) {
+    if (do_print > 0 && SystemCallData->SystemCallNumber != SYSNUM_MULTIDISPATCH) {
         aprintf("SVC handler: %s\n", call_names[call_type]);
         for (i = 0; i < SystemCallData->NumberOfArguments - 1; i++) {
             //Value = (long)*SystemCallData->Argument[i];
@@ -308,7 +308,6 @@ void svc(SYSTEM_CALL_DATA *SystemCallData) {
         }
         do_print--;
     }
-
     switch(SystemCallData->SystemCallNumber) {
     	case SYSNUM_TERMINATE_PROCESS: {
     		long pid = (long)SystemCallData->Argument[0];
