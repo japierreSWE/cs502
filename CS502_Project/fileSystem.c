@@ -47,6 +47,17 @@ int openFilesQueueId;
 unsigned char** diskContents; //the contents of the disk stored in memory.
 
 /**
+ * Initializes all structures needed by the file system.
+ * That is, the disk cache and the open files queue.
+ */
+void initFileSystem() {
+
+	openFilesQueueId = QCreate("openFilesQ");
+	initDiskContents();
+
+}
+
+/**
  * Formats a disk for it to be used
  * for file management.
  * Parameters:
@@ -60,10 +71,12 @@ int formatDisk(int diskID) {
 		return -1;
 	}
 
-	initDiskContents();
-	formattedDisk = diskID;
+	//we already formatted this disk, why do it again?
+	if(formattedDisk == diskID) {
+		return 0;
+	}
 
-	openFilesQueueId = QCreate("openFilesQ");
+	formattedDisk = diskID;
 
 	unsigned char* sectorZeroBuffer = malloc(PGSIZE * sizeof(char));
 

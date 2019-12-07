@@ -28,6 +28,7 @@ void bufferCopy(unsigned char* src, unsigned char* dest);
 void writeToSwapSpace(FrameData* frameData);
 char* readFromSwapSpace(int pageNumber);
 int getFormattedDisk();
+void initFileSystem();
 
 int formattedDisk; //which disk is formatted?
 
