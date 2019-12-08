@@ -48,6 +48,14 @@ void pcbInit(long address, long pageTable) {
 		exit(0);
 	}
 
+	if(address == (long)test41 || address == (long)test42 || address == (long)test43
+			|| address == (long)test44 || address == (long)test45 || address == (long)test46
+			|| address == (long)test48) {
+
+		schedulePrintLimit = 0;
+
+	}
+
 	//to ensure all output for this test.
 	if(address == (long)test7) {
 		schedulePrintLimit = 100;

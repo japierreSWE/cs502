@@ -246,9 +246,6 @@ void FaultHandler(void) {
     INT32 Status;
     MEMORY_MAPPED_IO mmio;       // Enables communication with hardware
 
-    static BOOL remove_this_from_your_fault_code = TRUE; 
-    static INT32 how_many_fault_entries = 0; 
-
     // Get cause of fault
     mmio.Field1 = mmio.Field2 = mmio.Field3 = 0;
     mmio.Mode = Z502GetInterruptInfo;
@@ -256,15 +253,6 @@ void FaultHandler(void) {
     DeviceID = mmio.Field1;
     Status   = mmio.Field2;
 
-    // This causes a print of the first few faults - and then stops printing!
-    // You can adjust this as you wish.  BUT this code as written here gives
-    // an indication of what's happening but then stops printing for long tests
-    // thus limiting the output.
-    how_many_fault_entries++; 
-    if (remove_this_from_your_fault_code && (how_many_fault_entries < 10)) {
-            aprintf("FaultHandler: Found device ID %d with status %d\n",
-                            (int) mmio.Field1, (int) mmio.Field2);
-    }
 
     int pageNumber = Status % 1024;
     UINT16* pageTable = (UINT16*)currentProcess()->pageTable;
@@ -272,12 +260,18 @@ void FaultHandler(void) {
     //this block should run for illegal address request.
     //we got here and the bit is valid, and the page entry is initialized.
     if((pageTable[pageNumber] & PTBL_VALID_BIT) != 0) {
-    	aprintf("Illegal memory address requested. Terminating process.\n");
-    	terminateProcess(-1);
+
+    	if(numProcessors == 1) {
+    		aprintf("Illegal memory address requested. Terminating process.\n");
+    		terminateProcess(-1);
+    	} else {
+    		addToReadyQueue(currentProcess());
+    		dispatch();
+    	}
+
+    } else {
+        handlePageFault(pageNumber);
     }
-
-    handlePageFault(pageNumber);
-
 
 } // End of FaultHandler
 
@@ -733,6 +727,11 @@ void osInit(int argc, char *argv[]) {
         mmio.Field2 = START_NEW_CONTEXT_AND_SUSPEND;
         MEM_WRITE(Z502Context, &mmio);     // Start up the context
 
+    }
+
+    //don't schedule print for memory tests
+    if(strncmp(argv[1], "test4", 5) == 0) {
+    	schedulePrintLimit = 0;
     }
 
     //control blocks for each test.
